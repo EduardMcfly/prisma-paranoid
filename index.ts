@@ -63,11 +63,12 @@ export const softDelete = (
         case 'findFirst':
         case 'findMany': {
           if (action === 'findUnique') params.action = 'findFirst';
+          params.args ||= {};
           const args = params.args;
           const { where } = deepSoftDelete(
             dataModel,
-            args.where,
-            args.include,
+            args?.where,
+            args?.include,
             newOpts,
           );
           args['where'] = where;
