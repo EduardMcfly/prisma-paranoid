@@ -5,7 +5,7 @@ import {
   deepSoftDelete,
   getParanoidField,
 } from './utils';
-import { SoftDeleteOptions } from './types';
+import { AllPrismaAction, SoftDeleteOptions } from './types';
 import {
   dataModels,
   DEFAULT_TYPE,
@@ -36,8 +36,7 @@ export const softDelete = (
     const model = params.model;
     const dataModel = model && dataModels.get(model);
     if (dataModel && isParanoid(dataModel)) {
-      const action = params.action;
-
+      const action = params.action as AllPrismaAction;
       const now = performance.now();
       switch (action) {
         case 'delete': {
@@ -60,9 +59,14 @@ export const softDelete = (
           break;
         }
         case 'findUnique':
+        case 'findUniqueOrThrow':
         case 'findFirst':
-        case 'findMany': {
+        case 'findFirstOrThrow':
+        case 'findMany':
+        case 'findManyOrThrow': {
           if (action === 'findUnique') params.action = 'findFirst';
+          if (action === 'findUniqueOrThrow')
+            params.action = 'findFirstOrThrow' as Prisma.PrismaAction;
           params.args ||= {};
           const args = params.args;
           const { where } = deepSoftDelete(
