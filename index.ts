@@ -1,4 +1,3 @@
-import { performance } from 'perf_hooks';
 import { Prisma } from '@prisma/client';
 import {
   isParanoid,
@@ -37,7 +36,6 @@ export const softDelete = (
     const dataModel = model && dataModels.get(model);
     if (dataModel && isParanoid(dataModel)) {
       const action = params.action as AllPrismaAction;
-      const now = performance.now();
       switch (action) {
         case 'delete': {
           // Delete queries
@@ -79,9 +77,6 @@ export const softDelete = (
           break;
         }
       }
-      console.log(
-        `Soft delete query build in ${performance.now() - now}ms`,
-      );
     }
     return next(params);
   };
