@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { AttributeTypes, ValidValue } from './constants';
 
 export type ModelWhere = Record<string, any>;
@@ -18,3 +19,7 @@ export type SoftDeleteOptions = {
   valueOnDelete?: () => ValidValue;
   valueOnFilter?: () => ValidValue;
 };
+
+export type AllPrismaAction =
+  | Prisma.PrismaAction
+  | `${Prisma.PrismaAction}OrThrow`;
