@@ -13,7 +13,12 @@ export enum AttributeTypes {
 export const DEFAULT_ATTRIBUTE = 'deletedAt';
 export const DEFAULT_TYPE = AttributeTypes.date;
 
+export const RELATION_FILTERS = ['is', 'isNot'];
 export const OPERATIONS: ReadonlyArray<string> = ['AND', 'OR', 'NOT'];
+export const OPERATIONS_WITH_RELATION_FILTERS = [
+  ...OPERATIONS,
+  ...RELATION_FILTERS,
+];
 
 export type ValidValue =
   | Date

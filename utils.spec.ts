@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { Prisma } from '@prisma/client';
+import { AnimalGendersTypes, Prisma } from '@prisma/client';
 import { deepSoftDelete, isParanoid } from './utils';
 import { dataModels } from './constants';
 
@@ -175,6 +175,11 @@ describe('softDelete', () => {
                 },
               },
             },
+            animalGender: {
+              is: {
+                code: { equals: AnimalGendersTypes.Female },
+              },
+            },
           },
           {},
         );
@@ -203,6 +208,66 @@ describe('softDelete', () => {
             },
             deletedAt: null,
           },
+          animalGender: {
+            is: {
+              code: { equals: AnimalGendersTypes.Female },
+              deletedAt: null,
+            },
+          },
+        };
+        expect(where).to.eql(bovineWhereInput);
+      });
+
+      it('With where is', () => {
+        const { where } = deepSoftDelete<
+          Prisma.BovineWhereInput,
+          Prisma.BovineInclude
+        >(
+          bovine,
+          {
+            animalGender: {
+              is: {
+                code: { equals: AnimalGendersTypes.Female },
+              },
+            },
+          },
+          {},
+        );
+        const bovineWhereInput: Prisma.BovineWhereInput = {
+          animalGender: {
+            is: {
+              code: { equals: AnimalGendersTypes.Female },
+              deletedAt: null,
+            },
+          },
+          deletedAt: null,
+        };
+        expect(where).to.eql(bovineWhereInput);
+      });
+
+      it('With where isNot', () => {
+        const { where } = deepSoftDelete<
+          Prisma.BovineWhereInput,
+          Prisma.BovineInclude
+        >(
+          bovine,
+          {
+            animalGender: {
+              isNot: {
+                code: { equals: AnimalGendersTypes.Female },
+              },
+            },
+          },
+          {},
+        );
+        const bovineWhereInput: Prisma.BovineWhereInput = {
+          animalGender: {
+            isNot: {
+              code: { equals: AnimalGendersTypes.Female },
+              deletedAt: null,
+            },
+          },
+          deletedAt: null,
         };
         expect(where).to.eql(bovineWhereInput);
       });
