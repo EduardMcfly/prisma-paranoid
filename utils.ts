@@ -9,7 +9,8 @@ import {
   dataModels,
   DEFAULT_ATTRIBUTE,
   DEFAULT_TYPE,
-  OPERATIONS,
+  OPERATIONS_WITH_RELATION_FILTERS,
+  RELATION_FILTERS,
   valuesOnFilter,
 } from './constants';
 
@@ -55,7 +56,12 @@ export const deepSoftDelete = <
 
   const paranoidField = getParanoidField(opts);
 
-  if (isParanoid(model, opts) && !(paranoidField in newWhere))
+  if (
+    isParanoid(model, opts) &&
+    !(paranoidField in newWhere) &&
+    // XOR is/isNot on relation filters
+    !RELATION_FILTERS.some(filter => filter in newWhere)
+  )
     newWhere[paranoidField] = value;
 
   for (const field of model.fields) {
@@ -70,7 +76,7 @@ export const deepSoftDelete = <
     if (include) newInclude = { ...newInclude, [name]: include };
   }
 
-  for (const OPERATION of OPERATIONS) {
+  for (const OPERATION of OPERATIONS_WITH_RELATION_FILTERS) {
     const whereOperation = newWhere[OPERATION];
     if (whereOperation instanceof Array) {
       whereOperation.forEach((where: ModelWhere, index: number) => {
