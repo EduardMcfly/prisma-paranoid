@@ -61,6 +61,7 @@ export const softDelete = (
         case 'findFirst':
         case 'findFirstOrThrow':
         case 'findMany':
+        case 'groupBy':
         case 'findManyOrThrow': {
           if (action === 'findUnique') params.action = 'findFirst';
           if (action === 'findUniqueOrThrow')
