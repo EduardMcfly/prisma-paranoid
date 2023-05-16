@@ -6,6 +6,7 @@ import {
   SoftDeleteOptions,
 } from './types';
 import {
+  annotation,
   dataModels,
   DEFAULT_ATTRIBUTE,
   DEFAULT_TYPE,
@@ -18,8 +19,21 @@ export const isParanoid = (
   fieldModel: Prisma.DMMF.Model,
   opts?: SoftDeleteOptions,
 ) => {
+  if (!fieldModel.documentation?.includes(annotation)) return false;
+
   const paranoidField = getParanoidField(opts);
-  return fieldModel.fields.some(f => f.name === paranoidField);
+
+  const hasParanoidField = fieldModel.fields.some(
+    f => f.name === paranoidField,
+  );
+
+  if (!hasParanoidField) {
+    console.warn(
+      `Model ${fieldModel.name} has ${annotation} annotation but does not have a ${paranoidField} field`,
+    );
+  }
+
+  return hasParanoidField;
 };
 
 export function getParanoidField(
