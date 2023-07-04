@@ -4,6 +4,8 @@ export const dataModels = new Map(
   Prisma.dmmf.datamodel.models.map(model => [model.name, model]),
 );
 
+export const annotation = `@paranoid`;
+
 export enum AttributeTypes {
   date = 'date',
   boolean = 'boolean',

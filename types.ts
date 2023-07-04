@@ -22,4 +22,5 @@ export type SoftDeleteOptions = {
 
 export type AllPrismaAction =
   | Prisma.PrismaAction
+  | 'groupBy'
   | `${Prisma.PrismaAction}OrThrow`;
