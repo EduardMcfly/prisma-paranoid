@@ -112,7 +112,7 @@ describe('softDelete', () => {
                 messages: {
                   every: {
                     text: {
-                      in: '',
+                      in: [''],
                     },
                     user: { lastName: '' },
                   },
@@ -164,17 +164,19 @@ describe('softDelete', () => {
           bovine,
           {
             farm: { id: 1 },
-            OR: {
-              bovinePurposes: {
-                every: {
-                  bovineId: 1,
-                  AND: {
-                    bovine: { id: 1 },
-                    NOT: [{ bovinePurposeType: { id: 1 } }],
+            OR: [
+              {
+                bovinePurposes: {
+                  every: {
+                    bovineId: 1,
+                    AND: {
+                      bovine: { id: 1 },
+                      NOT: [{ bovinePurposeType: { id: 1 } }],
+                    },
                   },
                 },
               },
-            },
+            ],
             animalGender: {
               is: {
                 code: { equals: AnimalGendersTypes.Female },
@@ -186,28 +188,30 @@ describe('softDelete', () => {
         const bovineWhereInput: Prisma.BovineWhereInput = {
           farm: { id: 1, deletedAt: null },
           deletedAt: null,
-          OR: {
-            bovinePurposes: {
-              every: {
-                bovineId: 1,
-                deletedAt: null,
-                AND: {
-                  bovine: {
-                    id: 1,
-                    deletedAt: null,
-                  },
+          OR: [
+            {
+              bovinePurposes: {
+                every: {
+                  bovineId: 1,
                   deletedAt: null,
-                  NOT: [
-                    {
-                      bovinePurposeType: { id: 1, deletedAt: null },
+                  AND: {
+                    bovine: {
+                      id: 1,
                       deletedAt: null,
                     },
-                  ],
+                    deletedAt: null,
+                    NOT: [
+                      {
+                        bovinePurposeType: { id: 1, deletedAt: null },
+                        deletedAt: null,
+                      },
+                    ],
+                  },
                 },
               },
+              deletedAt: null,
             },
-            deletedAt: null,
-          },
+          ],
           animalGender: {
             is: {
               code: { equals: AnimalGendersTypes.Female },
@@ -461,17 +465,19 @@ describe('softDelete', () => {
           bovine,
           {
             farm: { id: 1 },
-            OR: {
-              bovinePurposes: {
-                every: {
-                  bovineId: 1,
-                  AND: {
-                    bovine: { id: 1 },
-                    NOT: [{ bovinePurposeType: { id: 1 } }],
+            OR: [
+              {
+                bovinePurposes: {
+                  every: {
+                    bovineId: 1,
+                    AND: {
+                      bovine: { id: 1 },
+                      NOT: [{ bovinePurposeType: { id: 1 } }],
+                    },
                   },
                 },
               },
-            },
+            ],
           },
           {
             bovinePurposes: {
@@ -488,28 +494,30 @@ describe('softDelete', () => {
         const bovineWhereInput: Prisma.BovineWhereInput = {
           farm: { id: 1, deletedAt: null },
           deletedAt: null,
-          OR: {
-            bovinePurposes: {
-              every: {
-                bovineId: 1,
-                deletedAt: null,
-                AND: {
-                  bovine: {
-                    id: 1,
-                    deletedAt: null,
-                  },
+          OR: [
+            {
+              bovinePurposes: {
+                every: {
+                  bovineId: 1,
                   deletedAt: null,
-                  NOT: [
-                    {
-                      bovinePurposeType: { id: 1, deletedAt: null },
+                  AND: {
+                    bovine: {
+                      id: 1,
                       deletedAt: null,
                     },
-                  ],
+                    deletedAt: null,
+                    NOT: [
+                      {
+                        bovinePurposeType: { id: 1, deletedAt: null },
+                        deletedAt: null,
+                      },
+                    ],
+                  },
                 },
               },
+              deletedAt: null,
             },
-            deletedAt: null,
-          },
+          ],
         };
 
         expect(where).to.eql(bovineWhereInput);
