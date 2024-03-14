@@ -101,7 +101,7 @@ describe('softDelete', () => {
 
     describe('where', () => {
       describe('user', () => {
-        describe('messages.user.commegnts', () => {
+        describe('userRoles.user.commegnts', () => {
           it('should return a where object with deletedAt: null', () => {
             const { where } = deepSoftDelete<
               Prisma.UserWhereInput,
@@ -109,11 +109,9 @@ describe('softDelete', () => {
             >(
               user,
               {
-                messages: {
+                userRoles: {
                   every: {
-                    text: {
-                      in: [''],
-                    },
+                    roleId: 1,
                     user: { lastName: '' },
                   },
                 },
@@ -122,11 +120,9 @@ describe('softDelete', () => {
             );
             expect(where).to.eql({
               deletedAt: null,
-              messages: {
+              userRoles: {
                 every: {
-                  text: {
-                    in: '',
-                  },
+                  roleId: 1,
                   deletedAt: null,
                   user: { lastName: '', deletedAt: null },
                 },
@@ -279,7 +275,7 @@ describe('softDelete', () => {
 
     describe('include', () => {
       describe('user', () => {
-        describe('messages', () => {
+        describe('userRoles', () => {
           it('should return a where object with deletedAt: null', () => {
             const { where, include } = deepSoftDelete<
               Prisma.UserWhereInput,
@@ -288,19 +284,19 @@ describe('softDelete', () => {
               user,
               {},
               {
-                messages: true,
+                userRoles: true,
               },
             );
             expect(where).to.eql({
               deletedAt: null,
             } as Prisma.UserWhereInput);
             expect(include).to.eql({
-              messages: {
+              userRoles: {
                 where: { deletedAt: null },
               },
             } as Prisma.UserInclude);
           });
-          describe('messages.user.comments', () => {
+          describe('userRoles.user.comments', () => {
             it('should return a where object with deletedAt: null', () => {
               const { where, include } = deepSoftDelete<
                 Prisma.UserWhereInput,
@@ -309,11 +305,11 @@ describe('softDelete', () => {
                 user,
                 {},
                 {
-                  messages: {
+                  userRoles: {
                     include: {
-                      comments: {
+                      userRolePermissions: {
                         include: {
-                          user: true,
+                          permission: true,
                         },
                       },
                     },
@@ -324,15 +320,13 @@ describe('softDelete', () => {
                 deletedAt: null,
               } as Prisma.UserWhereInput);
               const userInclude: Prisma.UserInclude = {
-                messages: {
+                userRoles: {
                   include: {
-                    comments: {
-                      include: { user: true },
+                    userRolePermissions: {
+                      include: { permission: true },
                       where: {
                         deletedAt: null,
-                        user: {
-                          deletedAt: null,
-                        },
+                        permission: { deletedAt: null },
                       },
                     },
                   },
