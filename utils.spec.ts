@@ -6,6 +6,7 @@ import { dataModels } from './constants';
 const UserParanoidModel: Prisma.DMMF.Model = {
   name: 'User',
   dbName: 'user',
+  schema: '',
   primaryKey: null,
   uniqueFields: [],
   uniqueIndexes: [],
@@ -40,6 +41,7 @@ const UserParanoidModel: Prisma.DMMF.Model = {
 const UserNoParanoidModel: Prisma.DMMF.Model = {
   name: 'User',
   dbName: 'user',
+  schema: '',
   primaryKey: null,
   uniqueFields: [],
   uniqueIndexes: [],
