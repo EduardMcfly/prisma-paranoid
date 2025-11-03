@@ -1,7 +1,10 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client/edge';
 
 export const dataModels = new Map(
-  Prisma.dmmf.datamodel.models.map(model => [model.name, model]),
+  Prisma.dmmf.datamodel.models.map(model => [
+    model.name as Prisma.ModelName,
+    model,
+  ]),
 );
 
 export const annotation = `@paranoid`;
