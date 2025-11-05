@@ -36,6 +36,9 @@ export const isParanoid = (
   return hasParanoidField;
 };
 
+export const uncapitalize = <T extends string>(str: T) =>
+  (str.charAt(0).toLowerCase() + str.slice(1)) as Uncapitalize<T>;
+
 export function getParanoidField(
   opts: SoftDeleteOptions | undefined,
 ) {
@@ -122,7 +125,7 @@ function buildFieldSoftDelete(
   baseInclude: FieldInclude | null | undefined | boolean,
   opts?: SoftDeleteOptions,
 ) {
-  const fieldModel = dataModels.get(field.type);
+  const fieldModel = dataModels.get(field.type as Prisma.ModelName);
   let newInclude = parseInclude(baseInclude);
   let newWhere = baseWhere;
   if (fieldModel && isParanoid(fieldModel, opts)) {
