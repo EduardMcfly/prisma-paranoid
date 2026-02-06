@@ -63,7 +63,7 @@ pnpm add prisma-paranoid
 Example:
 
 ```prisma
-/// Soft-delete (paranoid). @paranoid
+/// @paranoid
 model User {
   id        String    @id @default(uuid())
   email     String    @unique
@@ -99,12 +99,12 @@ import { softDelete } from 'prisma-paranoid';
 const prisma = new PrismaClient().$extends(
   softDelete({
     field: {
-      name: 'deletedAt',  // default
-      type: 'date',       // 'date' | 'boolean' | 'other'
+      name: 'deletedAt', // default
+      type: 'date', // 'date' | 'boolean' | 'other'
     },
-    valueOnDelete: () => new Date(),  // value set when “deleting” (default for date)
-    valueOnFilter: () => null,        // value that means “not deleted” in filters (default for date)
-  })
+    valueOnDelete: () => new Date(), // value set when “deleting” (default for date)
+    valueOnFilter: () => null, // value that means “not deleted” in filters (default for date)
+  }),
 );
 ```
 
