@@ -1,6 +1,6 @@
 {
   "name": "prisma-paranoid",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "description": "Prisma extension for soft delete (paranoid pattern)",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -49,7 +49,7 @@
   },
   "homepage": "https://github.com/EduardMcfly/prisma-paranoid#readme",
   "peerDependencies": {
-    "@prisma/client": ">=5.0.0"
+    "@prisma/client": "^5.0.0 || ^6.0.0 || ^7.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
