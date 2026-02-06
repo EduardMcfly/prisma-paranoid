@@ -1,19 +1,12 @@
 import { Prisma } from '@prisma/client';
-import {
-  isParanoid,
-  deepSoftDelete,
-  getParanoidField,
-  uncapitalize,
-} from './utils';
+import { isParanoid, deepSoftDelete, getParanoidField, uncapitalize } from './utils';
 import { SoftDeleteOptions } from './types';
-import {
-  dataModels,
-  DEFAULT_TYPE,
-  valuesOnDelete,
-  valuesOnFilter,
-} from './constants';
+import { dataModels, DEFAULT_TYPE, valuesOnDelete, valuesOnFilter } from './constants';
 
-type PrismaMethod = (args: any) => Promise<any>;
+type PrismaMethod = (args: Record<string, unknown>) => Promise<Record<string, unknown>>;
+
+// eslint-disable-next-line
+type ModelWhere = any;
 
 // ***********************************/
 // * SOFT DELETE EXTENSION */
@@ -32,7 +25,7 @@ export const softDelete = (opts?: SoftDeleteOptions) => {
     valueOnFilter,
   };
 
-  return Prisma.defineExtension(client =>
+  return Prisma.defineExtension((client) =>
     client.$extends({
       query: {
         $allModels: {
@@ -50,8 +43,7 @@ export const softDelete = (opts?: SoftDeleteOptions) => {
               // Access the update method via the model delegate from client
 
               const methodName = uncapitalize(model);
-              const update = client[methodName]
-                .update as PrismaMethod;
+              const update = client[methodName].update as PrismaMethod;
               return update(updateArgs);
             }
             return query(args);
@@ -62,7 +54,7 @@ export const softDelete = (opts?: SoftDeleteOptions) => {
             if (dataModel && isParanoid(dataModel)) {
               // Change deleteMany to updateMany
               const updateArgs = {
-                where: (args as any).where,
+                where: args.where,
                 data: {
                   [paranoidField]: valueOnDelete(),
                 },
@@ -70,8 +62,7 @@ export const softDelete = (opts?: SoftDeleteOptions) => {
               const methodName = uncapitalize(model);
 
               const modelDelegate = client[methodName];
-              const updateMany =
-                modelDelegate.updateMany as PrismaMethod;
+              const updateMany = modelDelegate.updateMany as PrismaMethod;
               return updateMany(updateArgs);
             }
             return query(args);
@@ -80,20 +71,14 @@ export const softDelete = (opts?: SoftDeleteOptions) => {
             const { model, args, query } = params;
             const dataModel = model && dataModels.get(model);
             if (dataModel && isParanoid(dataModel)) {
-              const newArgs = { ...args } as Record<string, any>;
-              newArgs.where ||= {};
-              const { where } = deepSoftDelete(
-                dataModel,
-                newArgs.where,
-                newArgs.include,
-                newOpts,
-              );
+              const newArgs = { ...args };
+              newArgs.where ||= {} as ModelWhere;
+              const { where } = deepSoftDelete(dataModel, newArgs.where, newArgs.include, newOpts);
               newArgs.where = where;
               // Change findUnique to findFirst via model delegate
               const methodName = uncapitalize(model);
               const modelDelegate = client[methodName];
-              const findFirst =
-                modelDelegate.findFirst as PrismaMethod;
+              const findFirst = modelDelegate.findFirst as PrismaMethod;
               return findFirst(newArgs);
             }
             return query(args);
@@ -102,21 +87,15 @@ export const softDelete = (opts?: SoftDeleteOptions) => {
             const { model, args, query } = params;
             const dataModel = model && dataModels.get(model);
             if (dataModel && isParanoid(dataModel)) {
-              const newArgs = { ...args } as Record<string, any>;
-              newArgs.where ||= {};
-              const { where } = deepSoftDelete(
-                dataModel,
-                newArgs.where,
-                (newArgs as any).include,
-                newOpts,
-              );
+              const newArgs = { ...args };
+              newArgs.where ||= {} as ModelWhere;
+              const { where } = deepSoftDelete(dataModel, newArgs.where, newArgs.include, newOpts);
               newArgs.where = where;
               // Change findUniqueOrThrow to findFirstOrThrow via model delegate
 
               const methodName = uncapitalize(model);
               const modelDelegate = client[methodName];
-              const findFirstOrThrow =
-                modelDelegate.findFirstOrThrow as PrismaMethod;
+              const findFirstOrThrow = modelDelegate.findFirstOrThrow as PrismaMethod;
               return findFirstOrThrow(newArgs);
             }
             return query(args);
@@ -126,12 +105,7 @@ export const softDelete = (opts?: SoftDeleteOptions) => {
             if (dataModel && isParanoid(dataModel)) {
               const newArgs = { ...args };
               newArgs.where ||= {};
-              const { where } = deepSoftDelete(
-                dataModel,
-                newArgs.where,
-                (newArgs as any).include,
-                newOpts,
-              );
+              const { where } = deepSoftDelete(dataModel, newArgs.where, newArgs.include, newOpts);
               newArgs.where = where;
               return query(newArgs);
             }
@@ -140,14 +114,9 @@ export const softDelete = (opts?: SoftDeleteOptions) => {
           async findFirstOrThrow({ model, args, query }) {
             const dataModel = model && dataModels.get(model);
             if (dataModel && isParanoid(dataModel)) {
-              const newArgs = { ...args } as Record<string, any>;
+              const newArgs = { ...args };
               newArgs.where ||= {};
-              const { where } = deepSoftDelete(
-                dataModel,
-                newArgs.where,
-                newArgs.include,
-                newOpts,
-              );
+              const { where } = deepSoftDelete(dataModel, newArgs.where, newArgs.include, newOpts);
               newArgs.where = where;
               return query(newArgs);
             }
@@ -158,12 +127,7 @@ export const softDelete = (opts?: SoftDeleteOptions) => {
             if (dataModel && isParanoid(dataModel)) {
               const newArgs = { ...args };
               newArgs.where ||= {};
-              const { where } = deepSoftDelete(
-                dataModel,
-                newArgs.where,
-                (newArgs as any).include,
-                newOpts,
-              );
+              const { where } = deepSoftDelete(dataModel, newArgs.where, newArgs.include, newOpts);
               newArgs.where = where;
               return query(newArgs);
             }
@@ -174,12 +138,7 @@ export const softDelete = (opts?: SoftDeleteOptions) => {
             if (dataModel && isParanoid(dataModel)) {
               const newArgs = { ...args };
               newArgs.where ||= {};
-              const { where } = deepSoftDelete(
-                dataModel,
-                newArgs.where,
-                (newArgs as any).include,
-                newOpts,
-              );
+              const { where } = deepSoftDelete(dataModel, newArgs.where, null, newOpts);
               newArgs.where = where;
               return query(newArgs);
             }
