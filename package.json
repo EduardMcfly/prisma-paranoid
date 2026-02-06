@@ -5,7 +5,7 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "bin": {
-    "prisma-paranoid": "./src/generators/meta.js"
+    "prisma-metadata-generator": "./src/generators/meta.js"
   },
   "exports": {
     ".": {
