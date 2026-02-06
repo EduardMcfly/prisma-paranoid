@@ -43,9 +43,7 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opts
         'prisma-paranoid: runtime data model not found on client. Ensure you are using a Prisma Client instance.',
       );
     }
-    const dataModelsMap = new Map(
-      Object.entries(runtimeDataModel.models).map(([modelName, model]) => [modelName, model] as const),
-    );
+    const dataModelsMap = new Map(runtimeDataModel.models.map((model) => [model.name, model]));
     const models =
       opts.allModels === true ? buildModelsWithField(dataModelsMap, config.field.name) : (opts.models ?? {});
 
