@@ -32,6 +32,10 @@ export type SoftDeleteConfig = {
   valueOnFilter: () => ValidValue;
 };
 
+export type ModelConfig = {
+  paranoid: boolean;
+} & SoftDeleteDefaultConfig;
+
 export type MetadataField = {
   name: string;
   isId: boolean;
@@ -56,7 +60,7 @@ export type SoftDeleteOptions<ModelName extends string = Prisma.ModelName> = {
    * Map of model names to enable paranoid (soft delete) for. e.g. { Comment: true, Post: true }
    * Ignored when auto is true.
    */
-  models?: Record<ModelName, boolean>;
+  models?: Record<ModelName, ModelConfig>;
   /**
    * If true, every model that has the paranoid field (e.g. deletedAt) is treated as paranoid automatically.
    * @default false
@@ -68,7 +72,7 @@ export type SoftDeleteOptions<ModelName extends string = Prisma.ModelName> = {
 /** Internal context passed to utils (config + models map + DMMF map for traversal). */
 export type SoftDeleteContext = {
   config: SoftDeleteConfig;
-  models: Record<string, boolean>;
+  models: Record<string, ModelConfig>;
   dataModels: Map<string, MetadataModel>;
 };
 

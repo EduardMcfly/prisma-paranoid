@@ -1,7 +1,9 @@
 import { Prisma } from '@prisma/client';
-import { isParanoid, deepSoftDelete, getParanoidField, uncapitalize } from './utils';
+import { deepSoftDelete } from './utils/deepSoftDelete';
+import { isParanoid, getParanoidField, uncapitalize } from './utils/common';
 import { SoftDeleteOptions, SoftDeleteConfig, SoftDeleteContext, MetadataModel } from './types';
 import { DEFAULT_ATTRIBUTE, DEFAULT_TYPE, valuesOnDelete, valuesOnFilter } from './constants';
+import { buildModelsWithField } from './utils/buildModelsWithField';
 
 type PrismaMethod = (args: Record<string, unknown>) => Promise<Record<string, unknown>>;
 
@@ -20,31 +22,26 @@ function buildConfig<ModelName extends string = Prisma.ModelName>(
   };
 }
 
-function buildModelsWithField(dataModelsMap: Map<string, MetadataModel>, fieldName: string): Record<string, boolean> {
-  const out: Record<string, boolean> = {};
-  for (const [name, model] of dataModelsMap) {
-    const hasField = model.fields.some((f) => f.name === fieldName);
-    if (hasField) out[name] = true;
-  }
-  return out;
-}
-
 // ***********************************/
 // * PRISMA PARANOID EXTENSION */
 // ***********************************/
-export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opts: SoftDeleteOptions<ModelName>) => {
-  const config = buildConfig(opts);
+export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(options: SoftDeleteOptions<ModelName>) => {
+  const config = buildConfig(options);
   const paranoidField = getParanoidField(config);
 
   return Prisma.defineExtension((client) => {
-    const runtimeDataModel = opts.metadata;
+    const runtimeDataModel = options.metadata;
     if (!runtimeDataModel?.models) {
       throw new Error(
         'prisma-paranoid: runtime data model not found on client. Ensure you are using a Prisma Client instance.',
       );
     }
     const dataModelsMap = new Map(runtimeDataModel.models.map((model) => [model.name, model]));
-    const models = opts.auto === true ? buildModelsWithField(dataModelsMap, config.field.name) : (opts.models ?? {});
+    const models = buildModelsWithField({
+      options,
+      dataModelsMap: dataModelsMap as Map<ModelName, MetadataModel>,
+      config,
+    });
 
     const ctx: SoftDeleteContext = {
       config,

@@ -1,15 +1,18 @@
 import { expect } from 'chai';
 import { AnimalGendersTypes, Prisma } from '@prisma/client';
-import { deepSoftDelete, isParanoid } from './utils';
-import { MetadataModel, SoftDeleteContext } from './types';
+import { deepSoftDelete } from './utils/deepSoftDelete';
+import { isParanoid } from './utils/common';
+import { MetadataModel, ModelConfig, SoftDeleteContext } from './types';
 import { DEFAULT_ATTRIBUTE, DEFAULT_TYPE, valuesOnDelete, valuesOnFilter } from './constants';
 import metadata from '../prisma/generated/metadata';
 
 const dataModelsMap = new Map(metadata.models.map((m) => [m.name, m]));
 
-const allModelsParanoid = Object.fromEntries(Prisma.dmmf.datamodel.models.map((m) => [m.name, true] as const));
+const allModelsParanoid = Object.fromEntries(
+  Prisma.dmmf.datamodel.models.map((m) => [m.name, { paranoid: true }] as const),
+);
 
-function createCtx(models: Record<string, boolean>): SoftDeleteContext {
+function createCtx(models: Record<string, ModelConfig>): SoftDeleteContext {
   return {
     config: {
       field: { name: DEFAULT_ATTRIBUTE, type: DEFAULT_TYPE },
@@ -42,7 +45,7 @@ const UserNoParanoidModel: MetadataModel = {
 describe('softDelete', () => {
   describe('isParanoid', () => {
     it('should return true when model is in options.models', () => {
-      expect(isParanoid('User', createCtx({ User: true }))).to.eql(true);
+      expect(isParanoid('User', createCtx({ User: { paranoid: true } }))).to.eql(true);
     });
 
     it('should return false when model is not in options.models', () => {
