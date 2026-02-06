@@ -14,19 +14,28 @@ export function buildModelsWithField<ModelName extends string>({
   const { auto, models } = options;
   const { field: defaultField, ...defaultConfig } = config;
 
-  if (!auto) return models ?? {};
+  const mergeDefaultIntoModel = (modelConfig: ModelConfig | undefined, paranoid: boolean): ModelConfig => ({
+    ...defaultConfig,
+    ...modelConfig,
+    field: modelConfig?.field ?? defaultField,
+    paranoid,
+  });
+
+  if (!auto) {
+    const base = models ?? {};
+    const out: Record<string, ModelConfig> = {};
+    for (const [name, modelConfig] of Object.entries(base) as [string, ModelConfig][]) {
+      out[name] = mergeDefaultIntoModel(modelConfig, modelConfig?.paranoid ?? false);
+    }
+    return out;
+  }
 
   const out: Record<string, ModelConfig> = {};
   for (const [name, model] of dataModelsMap) {
     const modelConfig = models?.[name];
     const fieldName = modelConfig?.field?.name ?? defaultField.name;
     const hasField = model.fields.some((f) => f.name === fieldName);
-    const config: ModelConfig = {
-      ...defaultConfig,
-      field: modelConfig?.field ?? defaultField,
-      paranoid: modelConfig?.paranoid ?? hasField,
-    };
-    out[name] = config;
+    out[name] = mergeDefaultIntoModel(modelConfig, modelConfig?.paranoid ?? hasField);
   }
   return out;
 }

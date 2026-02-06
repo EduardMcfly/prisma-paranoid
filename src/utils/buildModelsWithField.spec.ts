@@ -31,7 +31,7 @@ function createConfig(fieldName = 'deletedAt'): SoftDeleteConfig {
 
 describe('buildModelsWithField', () => {
   describe('when auto is false', () => {
-    it('returns options.models when provided', () => {
+    it('returns options.models with defaultConfig merged into each model', () => {
       const options: SoftDeleteOptions<string> = {
         metadata: { models: [] },
         auto: false,
@@ -48,10 +48,12 @@ describe('buildModelsWithField', () => {
 
       const result = buildModelsWithField({ options, dataModelsMap, config });
 
-      expect(result).to.eql({
-        User: { paranoid: true },
-        Post: { paranoid: false },
-      });
+      expect(result.User?.paranoid).to.eql(true);
+      expect(result.Post?.paranoid).to.eql(false);
+      expect(result.User?.field).to.eql({ name: 'deletedAt', type: AttributeTypes.date });
+      expect(result.Post?.field).to.eql({ name: 'deletedAt', type: AttributeTypes.date });
+      expect(result.User?.valueOnDelete).to.eql(config.valueOnDelete);
+      expect(result.User?.valueOnFilter).to.eql(config.valueOnFilter);
     });
 
     it('returns empty object when options.models is undefined', () => {

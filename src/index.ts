@@ -28,7 +28,6 @@ function buildConfig<ModelName extends string = Prisma.ModelName>(
 // ***********************************/
 export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(options: SoftDeleteOptions<ModelName>) => {
   const config = buildConfig(options);
-  const paranoidField = getParanoidField(config);
 
   return Prisma.defineExtension((client) => {
     const runtimeDataModel = options.metadata;
@@ -59,10 +58,13 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opti
             const { model, args, query } = params;
             const dataModel = model ? dataModelsMap.get(model) : undefined;
             if (dataModel && isParanoid(model, ctx)) {
+              const modelConfig = ctx.models[model];
+              const fieldName = getParanoidField(modelConfig ?? config);
+              const valueOnDelete = modelConfig?.valueOnDelete ?? config.valueOnDelete;
               const updateArgs = {
                 where: args.where,
                 data: {
-                  [paranoidField]: config.valueOnDelete(),
+                  [fieldName]: valueOnDelete(),
                 },
               };
               const methodName = uncapitalize(model);
@@ -75,10 +77,13 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opti
             const { model, args, query } = params;
             const dataModel = model ? dataModelsMap.get(model) : undefined;
             if (dataModel && isParanoid(model, ctx)) {
+              const modelConfig = ctx.models[model];
+              const fieldName = getParanoidField(modelConfig ?? config);
+              const valueOnDelete = modelConfig?.valueOnDelete ?? config.valueOnDelete;
               const updateArgs = {
                 where: args.where,
                 data: {
-                  [paranoidField]: config.valueOnDelete(),
+                  [fieldName]: valueOnDelete(),
                 },
               };
               const methodName = uncapitalize(model);

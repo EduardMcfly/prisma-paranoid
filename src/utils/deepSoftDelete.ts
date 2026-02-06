@@ -15,10 +15,12 @@ export const deepSoftDelete = <Where extends ModelWhere, Include extends ModelIn
 
   if (!ctx) return { where: newWhere as Where, include: newInclude as Include };
 
+  const modelConfig = ctx.models[model.name];
   const config = ctx.config;
-  const fieldType = config.field.type;
-  const value = (config.valueOnFilter ?? valuesOnFilter[fieldType])();
-  const paranoidField = getParanoidField(config);
+  const effectiveConfig = modelConfig ?? config;
+  const fieldType = effectiveConfig.field?.type ?? config.field.type;
+  const value = (effectiveConfig.valueOnFilter ?? config.valueOnFilter ?? valuesOnFilter[fieldType])();
+  const paranoidField = getParanoidField(effectiveConfig);
 
   if (
     isParanoid(model.name, ctx) &&

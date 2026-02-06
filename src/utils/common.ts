@@ -1,5 +1,5 @@
 import { DEFAULT_ATTRIBUTE } from '../constants';
-import { SoftDeleteContext, SoftDeleteConfig, FieldInclude } from '../types';
+import { SoftDeleteContext, SoftDeleteConfig, FieldInclude, ModelConfig } from '../types';
 
 export const isParanoid = (modelName: string, ctx: SoftDeleteContext): boolean =>
   ctx.models[modelName]?.paranoid === true;
@@ -7,7 +7,7 @@ export const isParanoid = (modelName: string, ctx: SoftDeleteContext): boolean =
 export const uncapitalize = <T extends string>(str: T) =>
   (str.charAt(0).toLowerCase() + str.slice(1)) as Uncapitalize<T>;
 
-export function getParanoidField(config: SoftDeleteConfig | undefined): string {
+export function getParanoidField(config: SoftDeleteConfig | ModelConfig | undefined): string {
   return config?.field?.name ?? DEFAULT_ATTRIBUTE;
 }
 
