@@ -13,7 +13,7 @@ const compat = new FlatCompat({
 module.exports = [
   // Ignored paths (replaces .eslintignore)
   {
-    ignores: ['node_modules', 'lib', 'coverage', 'eslint.config.js'],
+    ignores: ['node_modules', 'lib', 'coverage', 'eslint.config.js', 'src/generators/meta.js'],
   },
 
   // Bring in recommended rule sets via compat
