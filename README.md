@@ -91,6 +91,7 @@ Which models are paranoid is set when you create the extension: use **`models`**
 | **`models`** | `Record<string, ModelConfig>` | No* | Map of model names to their config. Each entry can set `paranoid`, `field`, `valueOnDelete`, `valueOnFilter`. Ignored when `auto: true`. *Required if `auto` is not `true`. |
 | **`auto`** | `boolean` | No | When `true`, every model that has the paranoid field (e.g. `deletedAt`) is treated as paranoid. You can still pass `models` to override specific models. Default: `false`. |
 | **`defaultConfig`** | `SoftDeleteDefaultConfig` | No | Defaults for all models: field name/type and callbacks for delete/filter. Overridable per model in `models`. |
+| **`log`** | `boolean \| LogLevel` | No | Enable logging of paranoid models and their config. `true` = `'info'`, `false` or `'silent'` = disabled. Levels: `'silent'`, `'info'`, `'debug'`, `'warn'`, `'error'`. Default: `false`. |
 
 ### ModelConfig (per model)
 
@@ -111,6 +112,33 @@ When you pass `models`, each value can include:
 | **`field.type`** | `'date' \| 'boolean' \| 'other'` | `'date'` | Type of the field. With `'other'` you must set both `valueOnDelete` and `valueOnFilter`. |
 | **`valueOnDelete`** | `() => ValidValue` | `() => new Date()` (for date) | Value written to the field when a record is "deleted". |
 | **`valueOnFilter`** | `() => ValidValue` | `() => null` (for date) | Value used in filters to mean "not deleted" (e.g. `where: { deletedAt: null }`). |
+
+### Logging
+
+Set **`log`** to `true` or a level (`'info'` | `'debug'`) to print a table of paranoid models and their field config when the extension is applied. Useful to verify which models use soft delete and with which attribute.
+
+```ts
+prismaParanoid({
+  metadata,
+  auto: true,
+  log: true,        // or 'info' — prints table of paranoid models
+  // log: 'debug',  // table + short debug hint
+  // log: false,    // disabled (default)
+});
+```
+
+Example output:
+
+```
+[prisma-paranoid] Paranoid models (3):
+┌────────┬──────────────────┬────────────┐
+│ Model  │ Paranoid field    │ Field type │
+├────────┼──────────────────┼────────────┤
+│ User   │ deletedAt        │ date       │
+│ Post   │ deletedAt        │ date       │
+│ Comment│ archivedAt       │ date       │
+└────────┴──────────────────┴────────────┘
+```
 
 ---
 

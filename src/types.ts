@@ -52,6 +52,9 @@ type Model = {
 
 export type MetadataModel = ReadonlyDeep<Model> | Model;
 
+/** Log level for the extension. When `true`, defaults to `'info'`. Use `'silent'` or `false` to disable logs. */
+export type LogLevel = 'silent' | 'info' | 'debug' | 'warn' | 'error';
+
 export type SoftDeleteOptions<ModelName extends string = Prisma.ModelName> = {
   metadata: {
     models: MetadataModel[];
@@ -67,6 +70,11 @@ export type SoftDeleteOptions<ModelName extends string = Prisma.ModelName> = {
    */
   auto?: boolean;
   defaultConfig?: SoftDeleteDefaultConfig;
+  /**
+   * Enable logging of paranoid models and their config. `true` = 'info', `false` or 'silent' = disabled.
+   * @default false
+   */
+  log?: boolean | LogLevel;
 };
 
 /** Internal context passed to utils (config + models map + DMMF map for traversal). */

@@ -71,6 +71,7 @@
     "lib/**/*"
   ],
   "dependencies": {
-    "@prisma/generator-helper": "^7.3.0"
+    "@prisma/generator-helper": "^7.3.0",
+    "table": "^6.9.0"
   }
 }

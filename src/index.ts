@@ -4,6 +4,7 @@ import { isParanoid, getParanoidField, uncapitalize } from './utils/common';
 import { SoftDeleteOptions, SoftDeleteConfig, SoftDeleteContext, MetadataModel } from './types';
 import { DEFAULT_ATTRIBUTE, DEFAULT_TYPE, valuesOnDelete, valuesOnFilter } from './constants';
 import { buildModelsWithField } from './utils/buildModelsWithField';
+import { logParanoidModels } from './utils/logger';
 
 type PrismaMethod = (args: Record<string, unknown>) => Promise<Record<string, unknown>>;
 
@@ -48,6 +49,8 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opti
       models,
       dataModels: dataModelsMap,
     };
+
+    logParanoidModels(models, options.log);
 
     return client.$extends({
       query: {
@@ -168,5 +171,5 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opti
 };
 
 export default prismaParanoid;
-export type { SoftDeleteOptions, SoftDeleteDefaultConfig } from './types';
+export type { SoftDeleteOptions, SoftDeleteDefaultConfig, LogLevel } from './types';
 export { AttributeTypes } from './constants';
