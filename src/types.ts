@@ -1,5 +1,9 @@
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { AttributeTypes, ValidValue } from './constants';
+
+export declare type ReadonlyDeep<T> = {
+  readonly [K in keyof T]: ReadonlyDeep<T[K]>;
+};
 
 export type ModelWhere = Record<string, any>;
 export type FieldInclude = {
@@ -28,7 +32,26 @@ export type SoftDeleteConfig = {
   valueOnFilter: () => ValidValue;
 };
 
+export type MetadataField = {
+  name: string;
+  isId: boolean;
+  type: string;
+  kind: Prisma.DMMF.FieldKind;
+  isList: boolean;
+  isRequired: boolean;
+};
+
+type Model = {
+  name: string;
+  fields: Prisma.DMMF.Field[];
+};
+
+export type MetadataModel = ReadonlyDeep<Model> | Model;
+
 export type SoftDeleteOptions<ModelName extends string = Prisma.ModelName> = {
+  metadata: {
+    models: MetadataModel[];
+  };
   /**
    * Map of model names to enable paranoid (soft delete) for. e.g. { Comment: true, Post: true }
    * Ignored when allModels is true.
@@ -46,7 +69,7 @@ export type SoftDeleteOptions<ModelName extends string = Prisma.ModelName> = {
 export type SoftDeleteContext = {
   config: SoftDeleteConfig;
   models: Record<string, boolean>;
-  dataModels: Map<string, Prisma.DMMF.Model>;
+  dataModels: Map<string, MetadataModel>;
 };
 
 export type AllPrismaAction = Prisma.PrismaAction | 'groupBy' | `${Prisma.PrismaAction}OrThrow`;

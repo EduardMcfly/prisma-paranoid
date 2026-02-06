@@ -3,6 +3,11 @@ generator client {
   engineType = "client"
 }
 
+generator metadata {
+  provider = "node ./src/generators/meta.js"
+  output   = "./prisma/generated/metadata.ts"
+}
+
 datasource db {
   provider = "sqlite"
 }

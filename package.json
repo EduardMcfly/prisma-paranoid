@@ -4,6 +4,9 @@
   "description": "Prisma extension for soft delete (paranoid pattern)",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
+  "bin": {
+    "prisma-paranoid": "./src/generators/meta.js"
+  },
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
@@ -66,5 +69,8 @@
   },
   "files": [
     "lib/**/*"
-  ]
+  ],
+  "dependencies": {
+    "@prisma/generator-helper": "^7.3.0"
+  }
 }

@@ -1,21 +1,13 @@
 import { expect } from 'chai';
 import { AnimalGendersTypes, Prisma } from '@prisma/client';
 import { deepSoftDelete, isParanoid } from './utils';
-import { SoftDeleteContext } from './types';
-import {
-  DEFAULT_ATTRIBUTE,
-  DEFAULT_TYPE,
-  valuesOnDelete,
-  valuesOnFilter,
-} from './constants';
+import { MetadataModel, SoftDeleteContext } from './types';
+import { DEFAULT_ATTRIBUTE, DEFAULT_TYPE, valuesOnDelete, valuesOnFilter } from './constants';
+import metadata from '../prisma/generated/metadata';
 
-const dataModelsMap = new Map(
-  Prisma.dmmf.datamodel.models.map((m) => [m.name, m] as const),
-);
+const dataModelsMap = new Map(metadata.models.map((m) => [m.name, m]));
 
-const allModelsParanoid = Object.fromEntries(
-  Prisma.dmmf.datamodel.models.map((m) => [m.name, true] as const),
-);
+const allModelsParanoid = Object.fromEntries(Prisma.dmmf.datamodel.models.map((m) => [m.name, true] as const));
 
 function createCtx(models: Record<string, boolean>): SoftDeleteContext {
   return {
@@ -29,13 +21,8 @@ function createCtx(models: Record<string, boolean>): SoftDeleteContext {
   };
 }
 
-const UserNoParanoidModel: Prisma.DMMF.Model = {
+const UserNoParanoidModel: MetadataModel = {
   name: 'User',
-  dbName: 'user',
-  schema: '',
-  primaryKey: null,
-  uniqueFields: [],
-  uniqueIndexes: [],
   fields: [
     {
       name: 'id',
@@ -72,12 +59,7 @@ describe('softDelete', () => {
     const ctxBovine = createCtx(allModelsParanoid);
     describe('Model User paranoid', () => {
       it('should return a where object with deletedAt: null', () => {
-        const { where } = deepSoftDelete<Prisma.UserWhereInput, Prisma.UserInclude>(
-          user,
-          {},
-          {},
-          ctxUser,
-        );
+        const { where } = deepSoftDelete<Prisma.UserWhereInput, Prisma.UserInclude>(user, {}, {}, ctxUser);
         expect(where).to.eql({
           deletedAt: null,
         });
@@ -100,10 +82,7 @@ describe('softDelete', () => {
       describe('user', () => {
         describe('userRoles.user.commegnts', () => {
           it('should return a where object with deletedAt: null', () => {
-            const { where } = deepSoftDelete<
-              Prisma.UserWhereInput,
-              Prisma.UserInclude
-            >(
+            const { where } = deepSoftDelete<Prisma.UserWhereInput, Prisma.UserInclude>(
               user,
               {
                 userRoles: {
@@ -132,10 +111,7 @@ describe('softDelete', () => {
       describe('bovine', () => {
         describe('farm', () => {
           it('should return a where object with deletedAt: null', () => {
-            const { where } = deepSoftDelete<
-              Prisma.BovineWhereInput,
-              Prisma.BovineInclude
-            >(
+            const { where } = deepSoftDelete<Prisma.BovineWhereInput, Prisma.BovineInclude>(
               bovine,
               {
                 farm: { id: 1 },
@@ -152,10 +128,7 @@ describe('softDelete', () => {
       });
 
       it('With OR -> AND -> NOT', () => {
-        const { where } = deepSoftDelete<
-          Prisma.BovineWhereInput,
-          Prisma.BovineInclude
-        >(
+        const { where } = deepSoftDelete<Prisma.BovineWhereInput, Prisma.BovineInclude>(
           bovine,
           {
             farm: { id: 1 },
@@ -219,10 +192,7 @@ describe('softDelete', () => {
       });
 
       it('With where is', () => {
-        const { where } = deepSoftDelete<
-          Prisma.BovineWhereInput,
-          Prisma.BovineInclude
-        >(
+        const { where } = deepSoftDelete<Prisma.BovineWhereInput, Prisma.BovineInclude>(
           bovine,
           {
             animalGender: {
@@ -247,10 +217,7 @@ describe('softDelete', () => {
       });
 
       it('With where isNot', () => {
-        const { where } = deepSoftDelete<
-          Prisma.BovineWhereInput,
-          Prisma.BovineInclude
-        >(
+        const { where } = deepSoftDelete<Prisma.BovineWhereInput, Prisma.BovineInclude>(
           bovine,
           {
             animalGender: {
@@ -279,10 +246,7 @@ describe('softDelete', () => {
       describe('user', () => {
         describe('userRoles', () => {
           it('should return a where object with deletedAt: null', () => {
-            const { where, include } = deepSoftDelete<
-              Prisma.UserWhereInput,
-              Prisma.UserInclude
-            >(
+            const { where, include } = deepSoftDelete<Prisma.UserWhereInput, Prisma.UserInclude>(
               user,
               {},
               {
@@ -301,10 +265,7 @@ describe('softDelete', () => {
           });
           describe('userRoles.user.comments', () => {
             it('should return a where object with deletedAt: null', () => {
-              const { where, include } = deepSoftDelete<
-                Prisma.UserWhereInput,
-                Prisma.UserInclude
-              >(
+              const { where, include } = deepSoftDelete<Prisma.UserWhereInput, Prisma.UserInclude>(
                 user,
                 {},
                 {
@@ -346,10 +307,7 @@ describe('softDelete', () => {
       });
 
       it('With AND -> NOT', () => {
-        const { where, include } = deepSoftDelete<
-          Prisma.BovineWhereInput,
-          Prisma.BovineInclude
-        >(
+        const { where, include } = deepSoftDelete<Prisma.BovineWhereInput, Prisma.BovineInclude>(
           bovine,
           {},
           {
@@ -401,21 +359,17 @@ describe('softDelete', () => {
         describe('farm', () => {
           it('Where object with deletedAt: null', async () => {
             const deletedAt = new Date();
-            const getFarmPhotosInclude =
-              (): Prisma.FarmPhotoInclude => ({
-                farm: {
-                  select: { id: true },
-                  include: {
-                    bovines: {
-                      where: { deletedAt, id: 1 },
-                    },
+            const getFarmPhotosInclude = (): Prisma.FarmPhotoInclude => ({
+              farm: {
+                select: { id: true },
+                include: {
+                  bovines: {
+                    where: { deletedAt, id: 1 },
                   },
                 },
-              });
-            const { where, include } = deepSoftDelete<
-              Prisma.BovineWhereInput,
-              Prisma.BovineInclude
-            >(
+              },
+            });
+            const { where, include } = deepSoftDelete<Prisma.BovineWhereInput, Prisma.BovineInclude>(
               bovine,
               {
                 farm: { id: 1 },
@@ -458,10 +412,7 @@ describe('softDelete', () => {
       });
 
       it('With OR -> AND -> NOT', () => {
-        const { where, include } = deepSoftDelete<
-          Prisma.BovineWhereInput,
-          Prisma.BovineInclude
-        >(
+        const { where, include } = deepSoftDelete<Prisma.BovineWhereInput, Prisma.BovineInclude>(
           bovine,
           {
             farm: { id: 1 },

@@ -1,22 +1,15 @@
-import { Prisma } from '@prisma/client';
 import {
   FieldInclude,
   ModelWhere,
   ModelInclude,
   SoftDeleteConfig,
   SoftDeleteContext,
+  MetadataModel,
+  MetadataField,
 } from './types';
-import {
-  DEFAULT_ATTRIBUTE,
-  OPERATIONS_WITH_RELATION_FILTERS,
-  RELATION_FILTERS,
-  valuesOnFilter,
-} from './constants';
+import { DEFAULT_ATTRIBUTE, OPERATIONS_WITH_RELATION_FILTERS, RELATION_FILTERS, valuesOnFilter } from './constants';
 
-export const isParanoid = (
-  modelName: string,
-  ctx: SoftDeleteContext,
-): boolean => ctx.models[modelName] === true;
+export const isParanoid = (modelName: string, ctx: SoftDeleteContext): boolean => ctx.models[modelName] === true;
 
 export const uncapitalize = <T extends string>(str: T) =>
   (str.charAt(0).toLowerCase() + str.slice(1)) as Uncapitalize<T>;
@@ -25,26 +18,19 @@ export function getParanoidField(config: SoftDeleteConfig | undefined): string {
   return config?.field?.name ?? DEFAULT_ATTRIBUTE;
 }
 
-function parseInclude(
-  fieldInclude: boolean | FieldInclude | null | undefined,
-) {
+function parseInclude(fieldInclude: boolean | FieldInclude | null | undefined) {
   return typeof fieldInclude === 'object' ? fieldInclude : undefined;
 }
 
-export const deepSoftDelete = <
-  Where extends ModelWhere,
-  Include extends ModelInclude,
->(
-  model: Prisma.DMMF.Model,
+export const deepSoftDelete = <Where extends ModelWhere, Include extends ModelInclude>(
+  model: MetadataModel,
   where: Where | null = null,
   include?: Include | null,
   ctx?: SoftDeleteContext,
 ) => {
   const newWhere = { ...where };
 
-  let newInclude: ModelInclude | undefined = include
-    ? { ...include }
-    : undefined;
+  let newInclude: ModelInclude | undefined = include ? { ...include } : undefined;
 
   if (!ctx) return { where: newWhere as Where, include: newInclude as Include };
 
@@ -62,12 +48,7 @@ export const deepSoftDelete = <
 
   for (const field of model.fields) {
     const name = field.name;
-    const { include: inc, where: w } = buildFieldSoftDelete(
-      field,
-      newWhere[name],
-      newInclude?.[name],
-      ctx,
-    );
+    const { include: inc, where: w } = buildFieldSoftDelete(field, newWhere[name], newInclude?.[name], ctx);
     if (w) newWhere[name] = w;
     if (inc) newInclude = { ...newInclude, [name]: inc };
   }
@@ -76,21 +57,11 @@ export const deepSoftDelete = <
     const whereOperation = newWhere[OPERATION];
     if (whereOperation instanceof Array) {
       whereOperation.forEach((where: ModelWhere, index: number) => {
-        const { where: newWhereOperation } = deepSoftDelete(
-          model,
-          where,
-          undefined,
-          ctx,
-        );
+        const { where: newWhereOperation } = deepSoftDelete(model, where, undefined, ctx);
         whereOperation[index] = newWhereOperation;
       });
     } else if (whereOperation instanceof Object) {
-      const { where: newWhereOperation } = deepSoftDelete(
-        model,
-        whereOperation,
-        undefined,
-        ctx,
-      );
+      const { where: newWhereOperation } = deepSoftDelete(model, whereOperation, undefined, ctx);
       newWhere[OPERATION] = newWhereOperation;
     }
   }
@@ -99,7 +70,7 @@ export const deepSoftDelete = <
 };
 
 function buildFieldSoftDelete(
-  field: Prisma.DMMF.Field,
+  field: MetadataField,
   baseWhere: ModelWhere | null | undefined,
   baseInclude: FieldInclude | null | undefined | boolean,
   ctx?: SoftDeleteContext,
@@ -110,14 +81,8 @@ function buildFieldSoftDelete(
   let newWhere = baseWhere;
   if (fieldModel && isParanoid(field.type, ctx)) {
     if (baseInclude) {
-      const objectInclude =
-        typeof newInclude === 'boolean' ? undefined : newInclude?.include;
-      const result = deepSoftDelete(
-        fieldModel,
-        baseWhere || newInclude?.where,
-        objectInclude,
-        ctx,
-      );
+      const objectInclude = typeof newInclude === 'boolean' ? undefined : newInclude?.include;
+      const result = deepSoftDelete(fieldModel, baseWhere || newInclude?.where, objectInclude, ctx);
       if (field.isList)
         newInclude = {
           ...newInclude,
@@ -147,12 +112,7 @@ function buildFieldSoftDelete(
         for (const key in baseWhere) {
           if (Object.prototype.hasOwnProperty.call(baseWhere, key)) {
             const whereRelationFilter = baseWhere[key];
-            const result = deepSoftDelete(
-              fieldModel,
-              whereRelationFilter,
-              undefined,
-              ctx,
-            );
+            const result = deepSoftDelete(fieldModel, whereRelationFilter, undefined, ctx);
             if (whereRelationFilter) {
               baseWhere[key] = {
                 ...baseWhere[key],
@@ -163,12 +123,7 @@ function buildFieldSoftDelete(
           }
         }
       else {
-        const result = deepSoftDelete(
-          fieldModel,
-          baseWhere,
-          undefined,
-          ctx,
-        );
+        const result = deepSoftDelete(fieldModel, baseWhere, undefined, ctx);
         newWhere = { ...newWhere, ...result.where };
         writeInclude(result.include);
       }

@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { isParanoid, deepSoftDelete, getParanoidField, uncapitalize } from './utils';
-import { SoftDeleteOptions, SoftDeleteConfig, SoftDeleteContext } from './types';
+import { SoftDeleteOptions, SoftDeleteConfig, SoftDeleteContext, MetadataModel } from './types';
 import { DEFAULT_ATTRIBUTE, DEFAULT_TYPE, valuesOnDelete, valuesOnFilter } from './constants';
 
 type PrismaMethod = (args: Record<string, unknown>) => Promise<Record<string, unknown>>;
@@ -20,10 +20,7 @@ function buildConfig<ModelName extends string = Prisma.ModelName>(
   };
 }
 
-function buildModelsWithField(
-  dataModelsMap: Map<string, Prisma.DMMF.Model>,
-  fieldName: string,
-): Record<string, boolean> {
+function buildModelsWithField(dataModelsMap: Map<string, MetadataModel>, fieldName: string): Record<string, boolean> {
   const out: Record<string, boolean> = {};
   for (const [name, model] of dataModelsMap) {
     const hasField = model.fields.some((f) => f.name === fieldName);
@@ -40,7 +37,7 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opts
   const paranoidField = getParanoidField(config);
 
   return Prisma.defineExtension((client) => {
-    const runtimeDataModel = (client as any)._runtimeDataModel as Prisma.DMMF.Datamodel | undefined;
+    const runtimeDataModel = opts.metadata;
     if (!runtimeDataModel?.models) {
       throw new Error(
         'prisma-paranoid: runtime data model not found on client. Ensure you are using a Prisma Client instance.',
@@ -95,6 +92,7 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opts
           },
           async findUnique(params) {
             const { model, args, query } = params;
+
             const dataModel = model ? dataModelsMap.get(model) : undefined;
             if (dataModel && isParanoid(model, ctx)) {
               const newArgs = { ...args };
