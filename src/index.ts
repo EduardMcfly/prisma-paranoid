@@ -44,8 +44,7 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opts
       );
     }
     const dataModelsMap = new Map(runtimeDataModel.models.map((model) => [model.name, model]));
-    const models =
-      opts.allModels === true ? buildModelsWithField(dataModelsMap, config.field.name) : (opts.models ?? {});
+    const models = opts.auto === true ? buildModelsWithField(dataModelsMap, config.field.name) : (opts.models ?? {});
 
     const ctx: SoftDeleteContext = {
       config,

@@ -32,7 +32,7 @@
 
 ## Overview
 
-**prisma-paranoid** is a [Prisma Client extension](https://www.prisma.io/docs/concepts/components/prisma-client/client-extensions) that implements the **paranoid** (soft delete) pattern. You choose which models use soft delete via the `models` option or `allModels: true` (see [Usage](#usage)). For those models:
+**prisma-paranoid** is a [Prisma Client extension](https://www.prisma.io/docs/concepts/components/prisma-client/client-extensions) that implements the **paranoid** (soft delete) pattern. You choose which models use soft delete via the `models` option or `auto: true` (see [Usage](#usage)). For those models:
 
 - **delete** / **deleteMany** → perform an update setting the paranoid field (e.g. `deletedAt`) instead of actually deleting rows.
 - **findUnique**, **findFirst**, **findMany**, **findUniqueOrThrow**, **findFirstOrThrow**, **groupBy** → automatically filter out “deleted” records (e.g. `deletedAt: null`) and apply the same logic recursively to relations.
@@ -79,26 +79,39 @@ model User {
 }
 ```
 
-Which models are treated as paranoid is controlled when you create the extension: pass **`models`** (e.g. `{ User: true, Post: true }`) or set **`allModels: true`** so that every model that has the paranoid field is treated as paranoid. If you use another field name or type (e.g. `deleted: Boolean`), pass `defaultConfig` when creating the extension (see [Custom options](#custom-options)).
+Which models are treated as paranoid is controlled when you create the extension: pass **`models`** (e.g. `{ User: true, Post: true }`) or set **`auto: true`** so that every model that has the paranoid field is treated as paranoid. If you use another field name or type (e.g. `deleted: Boolean`), pass `defaultConfig` when creating the extension (see [Custom options](#custom-options)).
 
 ## Usage
 
-Import the **generated metadata** (obligatory) and pass it to `softDelete()`. You must also pass **`models`** (which models use soft delete) or **`allModels: true`** (every model that has the paranoid field). Then extend your Prisma client and use it as usual:
+Import the **generated metadata** (obligatory) and pass it to `prismaParanoid()`. You must also pass **`models`** (which models use soft delete) or **`auto: true`** (every model that has the paranoid field). Then extend your Prisma client and use it as usual:
 
 ```ts
 import { PrismaClient } from '@prisma/client';
-import { softDelete } from 'prisma-paranoid';
+import prismaParanoid from 'prisma-paranoid';
 import metadata from './prisma/generated/metadata'; // path from your generator output
 
 // Option A: only these models use soft delete
-const prisma = new PrismaClient().$extends(softDelete({ metadata, models: { User: true, Post: true } }));
-
-// Option B: every model that has the paranoid field (e.g. deletedAt) uses soft delete
-// const prisma = new PrismaClient().$extends(softDelete({ metadata, allModels: true }));
+const prisma = new PrismaClient().$extends(prismaParanoid({ metadata, models: { User: true, Post: true } }));
 
 // Normal usage — “deleted” rows are hidden and delete becomes update
 const users = await prisma.user.findMany();
 const deleted = await prisma.user.delete({ where: { id: '…' } }); // sets deletedAt
+```
+
+#### Automatic detection (`auto: true`)
+
+If you want every model that has the paranoid field (e.g. `deletedAt`) to be treated as paranoid automatically, use `auto: true`. You don't need to list each model in `models`:
+
+```ts
+import { PrismaClient } from '@prisma/client';
+import prismaParanoid from 'prisma-paranoid';
+import metadata from './prisma/generated/metadata';
+
+// Any model in your schema that has the paranoid field (e.g. deletedAt) will use soft delete
+const prisma = new PrismaClient().$extends(prismaParanoid({ metadata, auto: true }));
+
+const users = await prisma.user.findMany();   // User has deletedAt → soft delete applied
+const posts = await prisma.post.findMany();   // Post has deletedAt → soft delete applied
 ```
 
 ### Custom options
@@ -106,11 +119,11 @@ const deleted = await prisma.user.delete({ where: { id: '…' } }); // sets dele
 You can customize the paranoid field name and type, and the values used on “delete” and on “filter”:
 
 ```ts
-import { softDelete } from 'prisma-paranoid';
+import prismaParanoid from 'prisma-paranoid';
 import metadata from './prisma/generated/metadata';
 
 const prisma = new PrismaClient().$extends(
-  softDelete({
+  prismaParanoid({
     metadata,
     defaultConfig: {
       field: {

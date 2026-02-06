@@ -54,14 +54,14 @@ export type SoftDeleteOptions<ModelName extends string = Prisma.ModelName> = {
   };
   /**
    * Map of model names to enable paranoid (soft delete) for. e.g. { Comment: true, Post: true }
-   * Ignored when allModels is true.
+   * Ignored when auto is true.
    */
   models?: Record<ModelName, boolean>;
   /**
-   * If true, every model that has the paranoid field (e.g. deletedAt) is treated as paranoid.
+   * If true, every model that has the paranoid field (e.g. deletedAt) is treated as paranoid automatically.
    * @default false
    */
-  allModels?: boolean;
+  auto?: boolean;
   defaultConfig?: SoftDeleteDefaultConfig;
 };
 
