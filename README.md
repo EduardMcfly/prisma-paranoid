@@ -32,7 +32,7 @@
 
 ## Overview
 
-**prisma-paranoid** is a [Prisma Client extension](https://www.prisma.io/docs/concepts/components/prisma-client/client-extensions) that implements the **paranoid** (soft delete) pattern. Models marked with the `@paranoid` annotation in your schema will:
+**prisma-paranoid** is a [Prisma Client extension](https://www.prisma.io/docs/concepts/components/prisma-client/client-extensions) that implements the **paranoid** (soft delete) pattern. You choose which models use soft delete via the `models` option or `allModels: true` (see [Usage](#usage)). For those models:
 
 - **delete** / **deleteMany** → perform an update setting the paranoid field (e.g. `deletedAt`) instead of actually deleting rows.
 - **findUnique**, **findFirst**, **findMany**, **findUniqueOrThrow**, **findFirstOrThrow**, **groupBy** → automatically filter out “deleted” records (e.g. `deletedAt: null`) and apply the same logic recursively to relations.
@@ -44,6 +44,7 @@ So you keep data in the database but hide it from normal reads and turn deletes 
 - Node.js 18+
 - [Prisma](https://www.prisma.io/) 5+ and `@prisma/client` 5+
 - Generated Prisma Client (`prisma generate`)
+- **Metadata generator** — you must add the `prisma-metadata-generator` to your schema and run `prisma generate` (see [Schema setup](#schema-setup))
 
 ## Installation
 
@@ -56,14 +57,20 @@ pnpm add prisma-paranoid
 
 ## Schema setup
 
-1. Add a field to store the “deleted” state. The default is **`deletedAt`** (DateTime, optional).
+1. **Add the metadata generator (obligatory).** The extension needs runtime metadata from your schema. Add this generator and run `prisma generate`:
 
-2. Document the model with the **`@paranoid`** annotation so the extension knows which models are paranoid (e.g. a triple-slash comment so it appears in the generated DMMF).
+```prisma
+generator metadata {
+  provider = "prisma-metadata-generator"
+  output   = "./prisma/generated/metadata.ts"
+}
+```
+
+2. Add a field to store the “deleted” state on each model that should support soft delete. The default field name is **`deletedAt`** (DateTime, optional).
 
 Example:
 
 ```prisma
-/// @paranoid
 model User {
   id        String    @id @default(uuid())
   email     String    @unique
@@ -72,17 +79,22 @@ model User {
 }
 ```
 
-If you use another name or type (e.g. `deleted: Boolean`), you pass options when creating the extension (see below).
+Which models are treated as paranoid is controlled when you create the extension: pass **`models`** (e.g. `{ User: true, Post: true }`) or set **`allModels: true`** so that every model that has the paranoid field is treated as paranoid. If you use another field name or type (e.g. `deleted: Boolean`), pass `defaultConfig` when creating the extension (see [Custom options](#custom-options)).
 
 ## Usage
 
-Extend your Prisma client with `softDelete()` and use the extended client as usual:
+Import the **generated metadata** (obligatory) and pass it to `softDelete()`. You must also pass **`models`** (which models use soft delete) or **`allModels: true`** (every model that has the paranoid field). Then extend your Prisma client and use it as usual:
 
 ```ts
 import { PrismaClient } from '@prisma/client';
 import { softDelete } from 'prisma-paranoid';
+import metadata from './prisma/generated/metadata'; // path from your generator output
 
-const prisma = new PrismaClient().$extends(softDelete());
+// Option A: only these models use soft delete
+const prisma = new PrismaClient().$extends(softDelete({ metadata, models: { User: true, Post: true } }));
+
+// Option B: every model that has the paranoid field (e.g. deletedAt) uses soft delete
+// const prisma = new PrismaClient().$extends(softDelete({ metadata, allModels: true }));
 
 // Normal usage — “deleted” rows are hidden and delete becomes update
 const users = await prisma.user.findMany();
@@ -95,15 +107,19 @@ You can customize the paranoid field name and type, and the values used on “de
 
 ```ts
 import { softDelete } from 'prisma-paranoid';
+import metadata from './prisma/generated/metadata';
 
 const prisma = new PrismaClient().$extends(
   softDelete({
-    field: {
-      name: 'deletedAt', // default
-      type: 'date', // 'date' | 'boolean' | 'other'
+    metadata,
+    defaultConfig: {
+      field: {
+        name: 'deletedAt', // default
+        type: 'date', // 'date' | 'boolean' | 'other'
+      },
+      valueOnDelete: () => new Date(),
+      valueOnFilter: () => null,
     },
-    valueOnDelete: () => new Date(), // value set when “deleting” (default for date)
-    valueOnFilter: () => null, // value that means “not deleted” in filters (default for date)
   }),
 );
 ```
