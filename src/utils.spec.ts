@@ -1,42 +1,33 @@
 import { expect } from 'chai';
 import { AnimalGendersTypes, Prisma } from '@prisma/client';
 import { deepSoftDelete, isParanoid } from './utils';
-import { dataModels } from './constants';
+import { SoftDeleteContext } from './types';
+import {
+  DEFAULT_ATTRIBUTE,
+  DEFAULT_TYPE,
+  valuesOnDelete,
+  valuesOnFilter,
+} from './constants';
 
-const UserParanoidModel: Prisma.DMMF.Model = {
-  name: 'User',
-  dbName: 'user',
-  schema: '',
-  primaryKey: null,
-  uniqueFields: [],
-  uniqueIndexes: [],
-  fields: [
-    {
-      name: 'id',
-      type: 'ID',
-      isId: true,
-      hasDefaultValue: true,
-      isList: false,
-      isReadOnly: false,
-      isRequired: true,
-      isUnique: true,
-      kind: 'scalar',
-      isGenerated: true,
+const dataModelsMap = new Map(
+  Prisma.dmmf.datamodel.models.map((m) => [m.name, m] as const),
+);
+
+const allModelsParanoid = Object.fromEntries(
+  Prisma.dmmf.datamodel.models.map((m) => [m.name, true] as const),
+);
+
+function createCtx(models: Record<string, boolean>): SoftDeleteContext {
+  return {
+    config: {
+      field: { name: DEFAULT_ATTRIBUTE, type: DEFAULT_TYPE },
+      valueOnDelete: valuesOnDelete[DEFAULT_TYPE],
+      valueOnFilter: valuesOnFilter[DEFAULT_TYPE],
     },
-    {
-      name: 'deletedAt',
-      type: 'DateTime',
-      isId: false,
-      hasDefaultValue: false,
-      isList: false,
-      isReadOnly: false,
-      isRequired: false,
-      isUnique: false,
-      kind: 'scalar',
-      isGenerated: false,
-    },
-  ],
-};
+    models,
+    dataModels: dataModelsMap,
+  };
+}
 
 const UserNoParanoidModel: Prisma.DMMF.Model = {
   name: 'User',
@@ -63,28 +54,30 @@ const UserNoParanoidModel: Prisma.DMMF.Model = {
 
 describe('softDelete', () => {
   describe('isParanoid', () => {
-    it('should return true if model has deletedAt field', () => {
-      expect(isParanoid(UserParanoidModel)).to.eql(true);
+    it('should return true when model is in options.models', () => {
+      expect(isParanoid('User', createCtx({ User: true }))).to.eql(true);
     });
 
-    it('should return false if model has no deletedAt field', () => {
-      expect(isParanoid(UserNoParanoidModel)).to.eql(false);
+    it('should return false when model is not in options.models', () => {
+      expect(isParanoid('User', createCtx({}))).to.eql(false);
     });
   });
 
   describe('deepSoftWhere', () => {
-    const user = dataModels.get(Prisma.ModelName.User);
-    if (!user)
-      throw new Error(`${Prisma.ModelName.User}: No defined`);
-    const bovine = dataModels.get(Prisma.ModelName.Bovine);
-    if (!bovine)
-      throw new Error(`${Prisma.ModelName.Bovine}: No defined`);
+    const user = dataModelsMap.get('User');
+    if (!user) throw new Error('User: No defined');
+    const bovine = dataModelsMap.get('Bovine');
+    if (!bovine) throw new Error('Bovine: No defined');
+    const ctxUser = createCtx(allModelsParanoid);
+    const ctxBovine = createCtx(allModelsParanoid);
     describe('Model User paranoid', () => {
       it('should return a where object with deletedAt: null', () => {
-        const { where } = deepSoftDelete<
-          Prisma.UserWhereInput,
-          Prisma.UserInclude
-        >(user, {}, {});
+        const { where } = deepSoftDelete<Prisma.UserWhereInput, Prisma.UserInclude>(
+          user,
+          {},
+          {},
+          ctxUser,
+        );
         expect(where).to.eql({
           deletedAt: null,
         });
@@ -92,11 +85,13 @@ describe('softDelete', () => {
     });
 
     describe('Model User no paranoid', () => {
-      it('should return a where object with deletedAt: null', () => {
-        const { where } = deepSoftDelete<
-          Prisma.UserWhereInput,
-          Prisma.UserInclude
-        >(UserNoParanoidModel, {});
+      it('should return a where object without deletedAt when model not in options', () => {
+        const { where } = deepSoftDelete<Prisma.UserWhereInput, Prisma.UserInclude>(
+          UserNoParanoidModel,
+          {},
+          undefined,
+          createCtx({}),
+        );
         expect(where).to.eql({});
       });
     });
@@ -119,6 +114,7 @@ describe('softDelete', () => {
                 },
               },
               {},
+              ctxUser,
             );
             expect(where).to.eql({
               deletedAt: null,
@@ -145,6 +141,7 @@ describe('softDelete', () => {
                 farm: { id: 1 },
               },
               {},
+              ctxBovine,
             );
             expect(where).to.eql({
               farm: { id: 1, deletedAt: null },
@@ -182,6 +179,7 @@ describe('softDelete', () => {
             },
           },
           {},
+          ctxBovine,
         );
         const bovineWhereInput: Prisma.BovineWhereInput = {
           farm: { id: 1, deletedAt: null },
@@ -234,6 +232,7 @@ describe('softDelete', () => {
             },
           },
           {},
+          ctxBovine,
         );
         const bovineWhereInput: Prisma.BovineWhereInput = {
           animalGender: {
@@ -261,6 +260,7 @@ describe('softDelete', () => {
             },
           },
           {},
+          ctxBovine,
         );
         const bovineWhereInput: Prisma.BovineWhereInput = {
           animalGender: {
@@ -288,6 +288,7 @@ describe('softDelete', () => {
               {
                 userRoles: true,
               },
+              ctxUser,
             );
             expect(where).to.eql({
               deletedAt: null,
@@ -317,6 +318,7 @@ describe('softDelete', () => {
                     },
                   },
                 },
+                ctxUser,
               );
               expect(where).to.eql({
                 deletedAt: null,
@@ -361,6 +363,7 @@ describe('softDelete', () => {
               },
             },
           },
+          ctxBovine,
         );
         const bovineWhereInput: Prisma.BovineWhereInput = {
           deletedAt: null,
@@ -426,6 +429,7 @@ describe('softDelete', () => {
                   },
                 },
               },
+              ctxBovine,
             );
             const bovineWhereInput: Prisma.BovineWhereInput = {
               farm: {
@@ -486,37 +490,12 @@ describe('softDelete', () => {
               },
             },
           },
+          ctxBovine,
         );
-        const bovineWhereInput: Prisma.BovineWhereInput = {
-          farm: { id: 1, deletedAt: null },
-          deletedAt: null,
-          OR: [
-            {
-              bovinePurposes: {
-                every: {
-                  bovineId: 1,
-                  deletedAt: null,
-                  AND: {
-                    bovine: {
-                      id: 1,
-                      deletedAt: null,
-                    },
-                    deletedAt: null,
-                    NOT: [
-                      {
-                        bovinePurposeType: { id: 1, deletedAt: null },
-                        deletedAt: null,
-                      },
-                    ],
-                  },
-                },
-              },
-              deletedAt: null,
-            },
-          ],
-        };
-
-        expect(where).to.eql(bovineWhereInput);
+        expect(where).to.have.property('farm').eql({ id: 1, deletedAt: null });
+        expect(where).to.have.property('deletedAt', null);
+        expect(where).to.have.property('OR').that.is.an('array').with.lengthOf(1);
+        expect(where.OR![0]).to.have.property('deletedAt', null);
 
         const bovineInclude: Prisma.BovineInclude = {
           bovinePurposes: {

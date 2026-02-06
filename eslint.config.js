@@ -13,7 +13,7 @@ const compat = new FlatCompat({
 module.exports = [
   // Ignored paths (replaces .eslintignore)
   {
-    ignores: ['node_modules', 'lib', 'coverage'],
+    ignores: ['node_modules', 'lib', 'coverage', 'eslint.config.js'],
   },
 
   // Bring in recommended rule sets via compat
@@ -34,7 +34,7 @@ module.exports = [
       jest: jestPlugin,
     },
     rules: {
-      // Add project-specific overrides here if needed
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 ];

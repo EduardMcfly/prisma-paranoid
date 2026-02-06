@@ -7,21 +7,123 @@ datasource db {
   provider = "sqlite"
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  posts     Post[]
+enum AnimalGendersTypes {
+  Male
+  Female
 }
 
-model Post {
-  id        String   @id @default(uuid())
-  title     String
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  String
+// @paranoid
+model User {
+  id        Int        @id @default(autoincrement())
+  firstName String
+  lastName  String
+  email     String     @unique
+  password  String
+  userRoles UserRole[]
+  deletedAt DateTime?
+}
+
+// @paranoid
+model Role {
+  id        Int        @id @default(autoincrement())
+  name      String
+  userRoles UserRole[]
+  deletedAt DateTime?
+}
+
+// @paranoid
+model UserRole {
+  id                  Int                  @id @default(autoincrement())
+  userId              Int
+  roleId              Int
+  user                User                 @relation(fields: [userId], references: [id])
+  role                Role                 @relation(fields: [roleId], references: [id])
+  userRolePermissions UserRolePermission[]
+  deletedAt           DateTime?
+}
+
+// @paranoid
+model UserRolePermission {
+  id           Int        @id @default(autoincrement())
+  permissionId Int
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  userRole     UserRole?  @relation(fields: [userRoleId], references: [id])
+  userRoleId   Int?
+  deletedAt    DateTime?
+}
+
+// @paranoid
+model Permission {
+  id                  Int                  @id @default(autoincrement())
+  name                String
+  userRolePermissions UserRolePermission[]
+  deletedAt           DateTime?
+}
+
+// @paranoid
+model Bovine {
+  id             Int             @id @default(autoincrement())
+  name           String
+  farmId         Int
+  farm           Farm            @relation(fields: [farmId], references: [id])
+  bovinePurposes BovinePurpose[]
+  deletedAt      DateTime?
+  animalGender   AnimalGender?   @relation(fields: [animalGenderId], references: [id])
+  animalGenderId Int?
+  bovinePhotos   BovinePhoto[]
+}
+
+// @paranoid
+model BovinePhoto {
+  id        Int       @id @default(autoincrement())
+  url       String
+  deletedAt DateTime?
+  bovineId  Int
+  bovine    Bovine    @relation(fields: [bovineId], references: [id])
+}
+
+// @paranoid
+model BovinePurpose {
+  id                  Int               @id @default(autoincrement())
+  name                String
+  bovineId            Int
+  bovine              Bovine            @relation(fields: [bovineId], references: [id])
+  deletedAt           DateTime?
+  bovinePurposeTypeId Int
+  bovinePurposeType   BovinePurposeType @relation(fields: [bovinePurposeTypeId], references: [id])
+}
+
+// @paranoid
+model Farm {
+  id         Int         @id @default(autoincrement())
+  name       String
+  bovines    Bovine[]
+  deletedAt  DateTime?
+  farmPhotos FarmPhoto[]
+}
+
+// @paranoid
+model FarmPhoto {
+  id        Int       @id @default(autoincrement())
+  url       String
+  deletedAt DateTime?
+  farmId    Int
+  farm      Farm      @relation(fields: [farmId], references: [id])
+}
+
+// @paranoid
+model BovinePurposeType {
+  id             Int             @id @default(autoincrement())
+  name           String
+  deletedAt      DateTime?
+  bovinePurposes BovinePurpose[]
+}
+
+// @paranoid
+model AnimalGender {
+  id        Int                @id @default(autoincrement())
+  name      String
+  code      AnimalGendersTypes
+  deletedAt DateTime?
+  bovines   Bovine[]
 }

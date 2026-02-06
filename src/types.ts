@@ -11,7 +11,8 @@ export type ModelInclude = {
   [x: string]: boolean | undefined | null | FieldInclude;
 };
 
-export type SoftDeleteOptions = {
+/** Config for the paranoid field and values (can be shared or per-model later). */
+export type SoftDeleteDefaultConfig = {
   field?: {
     name: string;
     type: AttributeTypes;
@@ -20,7 +21,32 @@ export type SoftDeleteOptions = {
   valueOnFilter?: () => ValidValue;
 };
 
-export type AllPrismaAction =
-  | Prisma.PrismaAction
-  | 'groupBy'
-  | `${Prisma.PrismaAction}OrThrow`;
+/** Resolved config used internally (field, valueOnDelete, valueOnFilter always set). */
+export type SoftDeleteConfig = {
+  field: { name: string; type: AttributeTypes };
+  valueOnDelete: () => ValidValue;
+  valueOnFilter: () => ValidValue;
+};
+
+export type SoftDeleteOptions<ModelName extends string = Prisma.ModelName> = {
+  /**
+   * Map of model names to enable paranoid (soft delete) for. e.g. { Comment: true, Post: true }
+   * Ignored when allModels is true.
+   */
+  models?: Record<ModelName, boolean>;
+  /**
+   * If true, every model that has the paranoid field (e.g. deletedAt) is treated as paranoid.
+   * @default false
+   */
+  allModels?: boolean;
+  defaultConfig?: SoftDeleteDefaultConfig;
+};
+
+/** Internal context passed to utils (config + models map + DMMF map for traversal). */
+export type SoftDeleteContext = {
+  config: SoftDeleteConfig;
+  models: Record<string, boolean>;
+  dataModels: Map<string, Prisma.DMMF.Model>;
+};
+
+export type AllPrismaAction = Prisma.PrismaAction | 'groupBy' | `${Prisma.PrismaAction}OrThrow`;

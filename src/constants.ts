@@ -1,14 +1,3 @@
-import { Prisma } from '@prisma/client/edge';
-
-export const dataModels = new Map(
-  Prisma.dmmf.datamodel.models.map(model => [
-    model.name as Prisma.ModelName,
-    model,
-  ]),
-);
-
-export const annotation = `@paranoid`;
-
 export enum AttributeTypes {
   date = 'date',
   boolean = 'boolean',
@@ -20,18 +9,9 @@ export const DEFAULT_TYPE = AttributeTypes.date;
 
 export const RELATION_FILTERS = ['is', 'isNot'];
 export const OPERATIONS: ReadonlyArray<string> = ['AND', 'OR', 'NOT'];
-export const OPERATIONS_WITH_RELATION_FILTERS = [
-  ...OPERATIONS,
-  ...RELATION_FILTERS,
-];
+export const OPERATIONS_WITH_RELATION_FILTERS = [...OPERATIONS, ...RELATION_FILTERS];
 
-export type ValidValue =
-  | Date
-  | string
-  | number
-  | boolean
-  | undefined
-  | null;
+export type ValidValue = Date | string | number | boolean | undefined | null;
 
 const MIDDLEWARE_NAME = 'SoftDeletePrisma';
 
