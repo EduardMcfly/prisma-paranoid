@@ -79,44 +79,84 @@ model User {
 }
 ```
 
-Which models are treated as paranoid is controlled when you create the extension: pass **`models`** (e.g. `{ User: true, Post: true }`) or set **`auto: true`** so that every model that has the paranoid field is treated as paranoid. If you use another field name or type (e.g. `deleted: Boolean`), pass `defaultConfig` when creating the extension (see [Custom options](#custom-options)).
+Which models are paranoid is set when you create the extension: use **`models`** or **`auto: true`** (see [Configuration](#configuration)).
+
+## Configuration
+
+`prismaParanoid()` accepts a single options object with the following properties:
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| **`metadata`** | `{ models: MetadataModel[] }` | Yes | Output of the metadata generator. Import from the path set in your schema (e.g. `./prisma/generated/metadata`). |
+| **`models`** | `Record<string, ModelConfig>` | No* | Map of model names to their config. Each entry can set `paranoid`, `field`, `valueOnDelete`, `valueOnFilter`. Ignored when `auto: true`. *Required if `auto` is not `true`. |
+| **`auto`** | `boolean` | No | When `true`, every model that has the paranoid field (e.g. `deletedAt`) is treated as paranoid. You can still pass `models` to override specific models. Default: `false`. |
+| **`defaultConfig`** | `SoftDeleteDefaultConfig` | No | Defaults for all models: field name/type and callbacks for delete/filter. Overridable per model in `models`. |
+
+### ModelConfig (per model)
+
+When you pass `models`, each value can include:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| **`paranoid`** | `boolean` | Whether this model uses soft delete. |
+| **`field`** | `{ name: string; type: 'date' \| 'boolean' \| 'other' }` | Override the paranoid field name or type for this model. |
+| **`valueOnDelete`** | `() => Date \| string \| number \| boolean \| null` | Value set when "deleting". Overrides `defaultConfig`. |
+| **`valueOnFilter`** | `() => ...` | Value that means "not deleted" in queries. Overrides `defaultConfig`. |
+
+### defaultConfig (global defaults)
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| **`field.name`** | `string` | `'deletedAt'` | Name of the column used for soft delete. |
+| **`field.type`** | `'date' \| 'boolean' \| 'other'` | `'date'` | Type of the field. With `'other'` you must set both `valueOnDelete` and `valueOnFilter`. |
+| **`valueOnDelete`** | `() => ValidValue` | `() => new Date()` (for date) | Value written to the field when a record is "deleted". |
+| **`valueOnFilter`** | `() => ValidValue` | `() => null` (for date) | Value used in filters to mean "not deleted" (e.g. `where: { deletedAt: null }`). |
+
+---
 
 ## Usage
 
-Import the **generated metadata** (obligatory) and pass it to `prismaParanoid()`. You must also pass **`models`** (which models use soft delete) or **`auto: true`** (every model that has the paranoid field). Then extend your Prisma client and use it as usual:
+Import the **generated metadata** and pass it to `prismaParanoid()` with **`models`** or **`auto: true`** (see [Configuration](#configuration)). Then extend your Prisma client:
 
 ```ts
 import { PrismaClient } from '@prisma/client';
 import prismaParanoid from 'prisma-paranoid';
 import metadata from './prisma/generated/metadata'; // path from your generator output
 
-// Option A: only these models use soft delete
-const prisma = new PrismaClient().$extends(prismaParanoid({ metadata, models: { User: true, Post: true } }));
+// Only these models use soft delete (each needs paranoid: true)
+const prisma = new PrismaClient().$extends(
+  prismaParanoid({
+    metadata,
+    models: {
+      User: { paranoid: true },
+      Post: { paranoid: true },
+    },
+  }),
+);
 
 // Normal usage — “deleted” rows are hidden and delete becomes update
 const users = await prisma.user.findMany();
 const deleted = await prisma.user.delete({ where: { id: '…' } }); // sets deletedAt
 ```
 
-#### Automatic detection (`auto: true`)
+### Automatic detection (`auto: true`)
 
-If you want every model that has the paranoid field (e.g. `deletedAt`) to be treated as paranoid automatically, use `auto: true`. You don't need to list each model in `models`:
+Every model that has the paranoid field (e.g. `deletedAt`) is treated as paranoid. You can still pass `models` to override one model (e.g. `paranoid: false`):
 
 ```ts
 import { PrismaClient } from '@prisma/client';
 import prismaParanoid from 'prisma-paranoid';
 import metadata from './prisma/generated/metadata';
 
-// Any model in your schema that has the paranoid field (e.g. deletedAt) will use soft delete
 const prisma = new PrismaClient().$extends(prismaParanoid({ metadata, auto: true }));
 
 const users = await prisma.user.findMany();   // User has deletedAt → soft delete applied
 const posts = await prisma.post.findMany();   // Post has deletedAt → soft delete applied
 ```
 
-### Custom options
+### Custom field and values (`defaultConfig`)
 
-You can customize the paranoid field name and type, and the values used on “delete” and on “filter”:
+Use a different field name or type (e.g. `deleted: Boolean`), or custom values on delete/filter:
 
 ```ts
 import prismaParanoid from 'prisma-paranoid';
@@ -125,10 +165,11 @@ import metadata from './prisma/generated/metadata';
 const prisma = new PrismaClient().$extends(
   prismaParanoid({
     metadata,
+    auto: true,
     defaultConfig: {
       field: {
         name: 'deletedAt', // default
-        type: 'date', // 'date' | 'boolean' | 'other'
+        type: 'date',     // 'date' | 'boolean' | 'other'
       },
       valueOnDelete: () => new Date(),
       valueOnFilter: () => null,
@@ -137,7 +178,29 @@ const prisma = new PrismaClient().$extends(
 );
 ```
 
-For `type: 'other'` you must provide both `valueOnDelete` and `valueOnFilter` (e.g. a number or string).
+For `field.type: 'other'` you must provide both `valueOnDelete` and `valueOnFilter` (e.g. number or string).
+
+### Per-model overrides
+
+Override the field or paranoid flag for specific models:
+
+```ts
+prismaParanoid({
+  metadata,
+  auto: true,
+  models: {
+    // This model uses a different field name
+    AuditLog: { field: { name: 'archivedAt', type: 'date' }, paranoid: true },
+    // Disable soft delete for this model even though it has deletedAt
+    Session: { paranoid: false },
+  },
+  defaultConfig: {
+    field: { name: 'deletedAt', type: 'date' },
+    valueOnDelete: () => new Date(),
+    valueOnFilter: () => null,
+  },
+});
+```
 
 ## Scripts
 
