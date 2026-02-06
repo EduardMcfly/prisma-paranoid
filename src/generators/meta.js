@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const { mkdirSync, writeFileSync } = require('node:fs');
 const { join, dirname, basename, extname } = require('node:path');
 
