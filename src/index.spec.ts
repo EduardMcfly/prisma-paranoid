@@ -41,47 +41,82 @@ function createMetadataModel(name: string, fieldNames: string[]): MetadataModel 
   };
 }
 
-/** Captured arguments from delegate methods (update, updateMany, findFirst, etc.). */
+/** Model with no primary key (no field has isId). deleteMany will use updateMany. */
+function createMetadataModelWithoutPk(name: string, fieldNames: string[]): MetadataModel {
+  return {
+    name,
+    fields: fieldNames.map((f) => ({
+      name: f,
+      type: 'String',
+      isId: false,
+      isList: false,
+      isRequired: false,
+      kind: 'scalar' as const,
+      hasDefaultValue: false,
+      isReadOnly: false,
+      isUnique: false,
+      isGenerated: false,
+    })),
+  };
+}
+
+/** Captured arguments from delegate methods (update, updateMany, findFirst, findMany, etc.). */
 type CapturedArgs = {
   update?: any;
   updateMany?: any;
   findFirst?: any;
   findFirstOrThrow?: any;
+  findMany?: any;
+  /** All update() calls made inside deleteMany transaction (when model has PK). */
+  updateCalls?: any[];
 };
 
-const delegateMethods = (captured: CapturedArgs) => ({
-  update: async (args: any) => {
-    captured.update = args;
-    return {};
-  },
-  updateMany: async (args: any) => {
-    captured.updateMany = args;
-    return { count: 0 };
-  },
-  findFirst: async (args: any) => {
-    captured.findFirst = args;
-    return null;
-  },
-  findFirstOrThrow: async (args: any) => {
-    captured.findFirstOrThrow = args;
-    return null;
-  },
-});
+function delegateMethods(captured: CapturedArgs, findManyReturns: Record<string, any[]> = {}) {
+  return (modelName: string) => ({
+    update: async (args: any) => {
+      captured.update = args;
+      if (!captured.updateCalls) captured.updateCalls = [];
+      captured.updateCalls.push(args);
+      return {};
+    },
+    updateMany: async (args: any) => {
+      captured.updateMany = args;
+      return { count: 0 };
+    },
+    findFirst: async (args: any) => {
+      captured.findFirst = args;
+      return null;
+    },
+    findFirstOrThrow: async (args: any) => {
+      captured.findFirstOrThrow = args;
+      return null;
+    },
+    findMany: async (args: any) => {
+      captured.findMany = args;
+      return findManyReturns[modelName] ?? [];
+    },
+  });
+}
 
 /**
  * Mocks Prisma.defineExtension, runs prismaParanoid(options), and returns
- * captured handlers plus args passed to update/updateMany/findFirst/findFirstOrThrow.
- * The fake client exposes the same delegate for every model in options.metadata.models.
+ * captured handlers plus args passed to update/updateMany/findFirst/findFirstOrThrow/findMany.
+ * The fake client exposes delegates for every model in options.metadata.models.
+ * When deleteMany runs for a model with PK, it uses findMany + $transaction(update per item);
+ * optional findManyReturns per model name controls what findMany returns (default []).
  */
-function installExtensionWithFakeClient(options: {
-  metadata: { models: MetadataModel[] };
-  auto: boolean;
-  log?: false;
-  defaultConfig?: any;
-}): { capturedHandlers: Record<string, (params: ExtensionParams) => Promise<unknown>>; captured: CapturedArgs } {
+function installExtensionWithFakeClient(
+  options: {
+    metadata: { models: MetadataModel[] };
+    auto: boolean;
+    log?: false;
+    defaultConfig?: any;
+  },
+  findManyReturns: Record<string, any[]> = {},
+): { capturedHandlers: Record<string, (params: ExtensionParams) => Promise<unknown>>; captured: CapturedArgs } {
   const captured: CapturedArgs = {};
   const capturedHandlers: Record<string, (params: ExtensionParams) => Promise<unknown>> = {};
-  const delegates = delegateMethods(captured);
+  const createDelegates = delegateMethods(captured, findManyReturns);
 
   const fakeClient: any = {
     $extends(ext: { query?: { $allModels?: Record<string, (p: ExtensionParams) => Promise<unknown>> } }) {
@@ -93,9 +128,10 @@ function installExtensionWithFakeClient(options: {
       }
       return {};
     },
+    $transaction: async (fn: (txClient: any) => Promise<any>) => fn(fakeClient),
   };
   for (const model of options.metadata.models) {
-    fakeClient[uncapitalize(model.name)] = delegates;
+    fakeClient[uncapitalize(model.name)] = createDelegates(model.name);
   }
 
   const originalDefine = Prisma.defineExtension;
@@ -205,8 +241,10 @@ describe('prismaParanoid extension', () => {
     });
 
     describe('deleteMany', () => {
-      it('calls updateMany() with where containing paranoid filter and original where, and data with valueOnDelete', async () => {
-        const { capturedHandlers, captured } = installExtensionWithFakeClient(defaultOptions);
+      it('when model has PK: calls findMany() then $transaction(update per item) with correct where and data', async () => {
+        const { capturedHandlers, captured } = installExtensionWithFakeClient(defaultOptions, {
+          User: [{ id: 1 }],
+        });
         const args = { where: { email: 'a@b.com' } };
         await capturedHandlers.deleteMany({
           model: 'User',
@@ -215,10 +253,36 @@ describe('prismaParanoid extension', () => {
             throw new Error('query should not be called');
           },
         });
+        expect(captured.findMany).to.not.eql(undefined);
+        expect(captured.findMany.where).to.include.keys(DEFAULT_ATTRIBUTE);
+        expect(captured.findMany.where[DEFAULT_ATTRIBUTE]).to.eql(null);
+        expect(captured.findMany.where.email).to.eql('a@b.com');
+        expect(captured.updateCalls).to.have.lengthOf(1);
+        expect(captured.updateCalls![0].where).to.eql({ id: 1 });
+        expect(captured.updateCalls![0].data).to.have.property(DEFAULT_ATTRIBUTE);
+        expect(captured.updateCalls![0].data[DEFAULT_ATTRIBUTE]).to.be.instanceOf(Date);
+      });
+
+      it('when model has no PK: calls updateMany() with where and data', async () => {
+        const modelNoPk = createMetadataModelWithoutPk('Log', ['message', DEFAULT_ATTRIBUTE]);
+        const options = {
+          metadata: { models: [modelNoPk] },
+          auto: true,
+          log: false as const,
+        };
+        const { capturedHandlers, captured } = installExtensionWithFakeClient(options);
+        const args = { where: { message: 'foo' } };
+        await capturedHandlers.deleteMany({
+          model: 'Log',
+          args,
+          query: async () => {
+            throw new Error('query should not be called');
+          },
+        });
         expect(captured.updateMany).to.not.eql(undefined);
         expect(captured.updateMany.where).to.include.keys(DEFAULT_ATTRIBUTE);
         expect(captured.updateMany.where[DEFAULT_ATTRIBUTE]).to.eql(null);
-        expect(captured.updateMany.where.email).to.eql('a@b.com');
+        expect(captured.updateMany.where.message).to.eql('foo');
         expect(captured.updateMany.data).to.have.property(DEFAULT_ATTRIBUTE);
         expect(captured.updateMany.data[DEFAULT_ATTRIBUTE]).to.be.instanceOf(Date);
       });
