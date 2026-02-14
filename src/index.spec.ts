@@ -122,17 +122,13 @@ describe('prismaParanoid extension', () => {
     it('throws when options.metadata is missing', () => {
       const extend = prismaParanoid({ metadata: undefined as any, auto: true });
       const fakeClient = { $extends: () => ({}) };
-      expect(() => extend(fakeClient as any)).to.throw(
-        /runtime data model not found|metadata/,
-      );
+      expect(() => extend(fakeClient as any)).to.throw(/runtime data model not found|metadata/);
     });
 
     it('throws when options.metadata.models is missing', () => {
       const extend = prismaParanoid({ metadata: {} as any, auto: true });
       const fakeClient = { $extends: () => ({}) };
-      expect(() => extend(fakeClient as any)).to.throw(
-        /runtime data model not found|metadata/,
-      );
+      expect(() => extend(fakeClient as any)).to.throw(/runtime data model not found|metadata/);
     });
   });
 
@@ -192,7 +188,7 @@ describe('prismaParanoid extension', () => {
         });
         expect(captured.update).to.not.eql(undefined);
         expect(captured.update.where).to.include.keys(DEFAULT_ATTRIBUTE);
-        expect(captured.update.where[DEFAULT_ATTRIBUTE]).to.eql({ not: null });
+        expect(captured.update.where[DEFAULT_ATTRIBUTE]).to.eql(null);
         expect(captured.update.where.id).to.eql(1);
         expect(captured.update.data).to.have.property(DEFAULT_ATTRIBUTE);
         expect(captured.update.data[DEFAULT_ATTRIBUTE]).to.be.instanceOf(Date);
@@ -202,7 +198,7 @@ describe('prismaParanoid extension', () => {
         const { capturedHandlers, captured } = installExtensionWithFakeClient(defaultOptions);
         const args = { where: { email: 'a@b.com', id: 42 } };
         await capturedHandlers.delete({ model: 'User', args, query: async () => ({}) });
-        expect(captured.update.where[DEFAULT_ATTRIBUTE]).to.eql({ not: null });
+        expect(captured.update.where[DEFAULT_ATTRIBUTE]).to.eql(null);
         expect(captured.update.where.email).to.eql('a@b.com');
         expect(captured.update.where.id).to.eql(42);
       });
@@ -221,7 +217,7 @@ describe('prismaParanoid extension', () => {
         });
         expect(captured.updateMany).to.not.eql(undefined);
         expect(captured.updateMany.where).to.include.keys(DEFAULT_ATTRIBUTE);
-        expect(captured.updateMany.where[DEFAULT_ATTRIBUTE]).to.eql({ not: null });
+        expect(captured.updateMany.where[DEFAULT_ATTRIBUTE]).to.eql(null);
         expect(captured.updateMany.where.email).to.eql('a@b.com');
         expect(captured.updateMany.data).to.have.property(DEFAULT_ATTRIBUTE);
         expect(captured.updateMany.data[DEFAULT_ATTRIBUTE]).to.be.instanceOf(Date);
@@ -299,7 +295,7 @@ describe('prismaParanoid extension', () => {
           throw new Error('should not be called');
         },
       });
-      expect(captured.update.where[customField]).to.eql({ not: null });
+      expect(captured.update.where[customField]).to.eql(null);
       expect(captured.update.data).to.have.property(customField);
       expect(captured.update.data[customField]).to.be.instanceOf(Date);
     });
