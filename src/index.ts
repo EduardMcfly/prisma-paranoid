@@ -61,8 +61,9 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opti
               const modelConfig = ctx.models[model];
               const fieldName = getParanoidField(modelConfig ?? config);
               const valueOnDelete = modelConfig?.valueOnDelete ?? config.valueOnDelete;
+              const valueOnFilter = modelConfig?.valueOnFilter ?? config.valueOnFilter;
               const updateArgs = {
-                where: args.where,
+                where: { [fieldName]: { not: valueOnFilter() }, ...args.where },
                 data: {
                   [fieldName]: valueOnDelete(),
                 },
@@ -80,8 +81,9 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opti
               const modelConfig = ctx.models[model];
               const fieldName = getParanoidField(modelConfig ?? config);
               const valueOnDelete = modelConfig?.valueOnDelete ?? config.valueOnDelete;
+              const valueOnFilter = modelConfig?.valueOnFilter ?? config.valueOnFilter;
               const updateArgs = {
-                where: args.where,
+                where: { [fieldName]: { not: valueOnFilter() }, ...args.where },
                 data: {
                   [fieldName]: valueOnDelete(),
                 },
