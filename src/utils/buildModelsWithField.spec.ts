@@ -18,6 +18,7 @@ function createModel(name: string, fieldNames: string[]): MetadataModel {
       isUnique: false,
       isGenerated: false,
     })),
+    uniqueIndexes: [],
   };
 }
 

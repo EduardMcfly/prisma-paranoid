@@ -22,8 +22,16 @@ type ExtensionParams = {
   query: (args: any) => Promise<unknown>;
 };
 
-/** Minimal metadata model for testing. */
-function createMetadataModel(name: string, fieldNames: string[]): MetadataModel {
+/**
+ * Minimal metadata model for testing.
+ * By default includes a uniqueIndex on the 'id' field so that
+ * deleteMany takes the findMany + $transaction(update) path.
+ */
+function createMetadataModel(
+  name: string,
+  fieldNames: string[],
+  { uniqueIndexes = [{ name: 'User_id_key', fields: ['id'] }] } = {},
+): MetadataModel {
   return {
     name,
     fields: fieldNames.map((f) => ({
@@ -38,10 +46,14 @@ function createMetadataModel(name: string, fieldNames: string[]): MetadataModel 
       isUnique: f === 'id',
       isGenerated: false,
     })),
+    uniqueIndexes,
   };
 }
 
-/** Model with no primary key (no field has isId). deleteMany will use updateMany. */
+/**
+ * Model with no primary key (no field has isId) and no uniqueIndexes.
+ * deleteMany will fall back to updateMany.
+ */
 function createMetadataModelWithoutPk(name: string, fieldNames: string[]): MetadataModel {
   return {
     name,
@@ -57,6 +69,7 @@ function createMetadataModelWithoutPk(name: string, fieldNames: string[]): Metad
       isUnique: false,
       isGenerated: false,
     })),
+    uniqueIndexes: [],
   };
 }
 
@@ -241,26 +254,62 @@ describe('prismaParanoid extension', () => {
     });
 
     describe('deleteMany', () => {
-      it('when model has PK: calls findMany() then $transaction(update per item) with correct where and data', async () => {
+      it('when model has PK and uniqueIndexes: calls findMany(select) then $transaction(update with select) per item', async () => {
         const { capturedHandlers, captured } = installExtensionWithFakeClient(defaultOptions, {
-          User: [{ id: 1 }],
+          User: [{ id: 1 }, { id: 2 }],
         });
         const args = { where: { email: 'a@b.com' } };
-        await capturedHandlers.deleteMany({
+        const result = await capturedHandlers.deleteMany({
           model: 'User',
           args,
           query: async () => {
             throw new Error('query should not be called');
           },
         });
+        // findMany receives where with paranoid filter and select with PK only
         expect(captured.findMany).to.not.eql(undefined);
         expect(captured.findMany.where).to.include.keys(DEFAULT_ATTRIBUTE);
         expect(captured.findMany.where[DEFAULT_ATTRIBUTE]).to.eql(null);
         expect(captured.findMany.where.email).to.eql('a@b.com');
-        expect(captured.updateCalls).to.have.lengthOf(1);
+        expect(captured.findMany.select).to.eql({ id: true });
+        // One update call per item in the transaction
+        expect(captured.updateCalls).to.have.lengthOf(2);
         expect(captured.updateCalls![0].where).to.eql({ id: 1 });
         expect(captured.updateCalls![0].data).to.have.property(DEFAULT_ATTRIBUTE);
         expect(captured.updateCalls![0].data[DEFAULT_ATTRIBUTE]).to.be.instanceOf(Date);
+        expect(captured.updateCalls![0].select).to.eql({ id: true });
+        expect(captured.updateCalls![1].where).to.eql({ id: 2 });
+        expect(captured.updateCalls![1].data[DEFAULT_ATTRIBUTE]).to.be.instanceOf(Date);
+        expect(captured.updateCalls![1].select).to.eql({ id: true });
+        // Returns count matching the number of items
+        expect(result).to.eql({ count: 2 });
+      });
+
+      it('when model has PK but no uniqueIndexes: falls back to updateMany()', async () => {
+        const modelNoUnique = createMetadataModel('UserNoUnique', ['id', 'email', DEFAULT_ATTRIBUTE], {
+          uniqueIndexes: [],
+        });
+        const options = {
+          metadata: { models: [modelNoUnique] },
+          auto: true,
+          log: false as const,
+        };
+        const { capturedHandlers, captured } = installExtensionWithFakeClient(options);
+        const args = { where: { email: 'a@b.com' } };
+        await capturedHandlers.deleteMany({
+          model: 'UserNoUnique',
+          args,
+          query: async () => {
+            throw new Error('query should not be called');
+          },
+        });
+        expect(captured.updateMany).to.not.eql(undefined);
+        expect(captured.updateMany.where[DEFAULT_ATTRIBUTE]).to.eql(null);
+        expect(captured.updateMany.where.email).to.eql('a@b.com');
+        expect(captured.updateMany.data).to.have.property(DEFAULT_ATTRIBUTE);
+        expect(captured.updateMany.data[DEFAULT_ATTRIBUTE]).to.be.instanceOf(Date);
+        // findMany should NOT have been called (no transaction path)
+        expect(captured.findMany).to.eql(undefined);
       });
 
       it('when model has no PK: calls updateMany() with where and data', async () => {

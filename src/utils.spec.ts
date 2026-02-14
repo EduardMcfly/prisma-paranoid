@@ -40,6 +40,7 @@ const UserNoParanoidModel: MetadataModel = {
       isGenerated: true,
     },
   ],
+  uniqueIndexes: [],
 };
 
 describe('softDelete', () => {
