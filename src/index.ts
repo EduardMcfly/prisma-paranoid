@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import type { GetBatchResult } from '@prisma/client/runtime/client';
 import { deepSoftDelete } from './utils/deepSoftDelete';
 import { isParanoid, getParanoidField, uncapitalize } from './utils/common';
 import { SoftDeleteOptions, SoftDeleteConfig, SoftDeleteContext, MetadataModel } from './types';
@@ -7,6 +8,8 @@ import { buildModelsWithField } from './utils/buildModelsWithField';
 import { logParanoidModels } from './utils/logger';
 
 type PrismaMethod = (args: Record<string, unknown>) => Promise<Record<string, unknown>>;
+type FindManyMethod = (args: Record<string, unknown>) => Promise<Record<string, unknown>[]>;
+type BulkMethod = (args: Record<string, unknown>) => Promise<GetBatchResult>;
 
 function buildConfig<ModelName extends string = Prisma.ModelName>(
   opts: SoftDeleteOptions<ModelName>,
@@ -74,7 +77,7 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opti
             }
             return query(args);
           },
-          async deleteMany(params) {
+          async deleteMany(params): Promise<GetBatchResult> {
             const { model, args, query } = params;
             const dataModel = model ? dataModelsMap.get(model) : undefined;
             if (dataModel && isParanoid(model, ctx)) {
@@ -82,15 +85,32 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opti
               const fieldName = getParanoidField(modelConfig ?? config);
               const valueOnDelete = modelConfig?.valueOnDelete ?? config.valueOnDelete;
               const valueOnFilter = modelConfig?.valueOnFilter ?? config.valueOnFilter;
-              const updateArgs = {
-                where: { [fieldName]: valueOnFilter(), ...args.where },
-                data: {
-                  [fieldName]: valueOnDelete(),
-                },
-              };
+              const where = { [fieldName]: valueOnFilter(), ...args.where };
+
+              const pkId = dataModel.fields.find((field) => field.isId);
               const methodName = uncapitalize(model);
-              const updateMany = client[methodName].updateMany as PrismaMethod;
-              return updateMany(updateArgs);
+              if (!pkId) {
+                const updateArgs = {
+                  where: where,
+                  data: {
+                    [fieldName]: valueOnDelete(),
+                  },
+                };
+                const updateMany = client[methodName].updateMany as BulkMethod;
+                return updateMany(updateArgs);
+              }
+              const findMany = client[methodName].findMany as FindManyMethod;
+              const list = await findMany({ where, select: { [pkId.name]: true } });
+              await client.$transaction(async (client) => {
+                const update = client[methodName].update as PrismaMethod;
+                for (const item of list) {
+                  await update({
+                    where: { [pkId.name]: item.id },
+                    data: { [fieldName]: valueOnDelete() },
+                  });
+                }
+              });
+              return { count: list.length };
             }
             return query(args);
           },
