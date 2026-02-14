@@ -16,6 +16,7 @@ generatorHandler({
     const data = options.dmmf.datamodel.models.map((model) => ({
       name: model.name,
       fields: model.fields,
+      uniqueIndexes: model.uniqueIndexes,
     }));
 
     const outputFile = options.generator.output?.value;
@@ -35,7 +36,7 @@ generatorHandler({
       case '.ts': {
         const contents = [];
         contents.push(`import type { Prisma } from '@prisma/client';`);
-        contents.push(`type Model = { name: string; fields: Prisma.DMMF.Field[] };`);
+        contents.push(`type Model = { name: string; fields: Prisma.DMMF.Field[], uniqueIndexes: Prisma.DMMF.uniqueIndex[] };`);
         contents.push(`const models: Model[] = ${JSON.stringify(data, null, 2)};`);
         contents.push(`const metadata = { models };`);
         contents.push(`export default metadata;`);
@@ -52,11 +53,11 @@ generatorHandler({
         throw new Error('Invalid output file extension for metadata generator');
     }
     {
-      let content = '';
-      content += `declare type MetadataModels = ${JSON.stringify(data, null, 2)};`;
-      content += `declare const metadata: { models: MetadataModels };`;
+      const contents = [];
+      contents.push(`declare type MetadataModels = ${JSON.stringify(data, null, 2)};`);
+      contents.push(`declare const metadata: { models: MetadataModels };`);
       const declaration = `export default metadata;`;
-      writeFileSync(join(pathDir, pathFile.replace(extension, '.d.ts')), `${content}\n${declaration}`);
+      writeFileSync(join(pathDir, pathFile.replace(extension, '.d.ts')), contents.join('\n'));
     }
   },
 });

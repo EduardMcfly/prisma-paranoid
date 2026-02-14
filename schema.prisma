@@ -45,6 +45,8 @@ model UserRole {
   role                Role                 @relation(fields: [roleId], references: [id])
   userRolePermissions UserRolePermission[]
   deletedAt           DateTime?
+
+  @@unique([userId, roleId, deletedAt])
 }
 
 // @paranoid

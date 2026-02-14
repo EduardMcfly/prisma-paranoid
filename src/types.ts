@@ -48,6 +48,7 @@ export type MetadataField = {
 type Model = {
   name: string;
   fields: Prisma.DMMF.Field[];
+  uniqueIndexes: Prisma.DMMF.uniqueIndex[];
 };
 
 export type MetadataModel = ReadonlyDeep<Model> | Model;

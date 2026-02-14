@@ -88,30 +88,32 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opti
               const where = { [fieldName]: valueOnFilter(), ...args.where };
 
               const pkId = dataModel.fields.find((field) => field.isId);
+              const hasUniqueIndexes = dataModel.uniqueIndexes.length > 0;
               const methodName = uncapitalize(model);
-              if (!pkId) {
-                const updateArgs = {
-                  where: where,
-                  data: {
-                    [fieldName]: valueOnDelete(),
-                  },
-                };
-                const updateMany = client[methodName].updateMany as BulkMethod;
-                return updateMany(updateArgs);
+              if (pkId && hasUniqueIndexes) {
+                const findMany = client[methodName].findMany as FindManyMethod;
+                const list = await findMany({ where, select: { [pkId.name]: true } });
+                await client.$transaction(async (client) => {
+                  const update = client[methodName].update as PrismaMethod;
+                  for (const item of list) {
+                    await update({
+                      where: { [pkId.name]: item.id },
+                      data: { [fieldName]: valueOnDelete() },
+                      select: { [pkId.name]: true },
+                    });
+                  }
+                });
+                return { count: list.length };
               }
-              const findMany = client[methodName].findMany as FindManyMethod;
-              const list = await findMany({ where, select: { [pkId.name]: true } });
-              await client.$transaction(async (client) => {
-                const update = client[methodName].update as PrismaMethod;
-                for (const item of list) {
-                  await update({
-                    where: { [pkId.name]: item.id },
-                    data: { [fieldName]: valueOnDelete() },
-                    select: { [pkId.name]: true },
-                  });
-                }
-              });
-              return { count: list.length };
+
+              const updateArgs = {
+                where: where,
+                data: {
+                  [fieldName]: valueOnDelete(),
+                },
+              };
+              const updateMany = client[methodName].updateMany as BulkMethod;
+              return updateMany(updateArgs);
             }
             return query(args);
           },
