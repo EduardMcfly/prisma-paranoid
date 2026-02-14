@@ -107,6 +107,7 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opti
                   await update({
                     where: { [pkId.name]: item.id },
                     data: { [fieldName]: valueOnDelete() },
+                    select: { [pkId.name]: true },
                   });
                 }
               });
