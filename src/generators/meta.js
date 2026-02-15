@@ -36,7 +36,7 @@ generatorHandler({
       case '.ts': {
         const contents = [];
         contents.push(`import type { Prisma } from '@prisma/client';`);
-        contents.push(`type Model = { name: string; fields: Prisma.DMMF.Field[], uniqueIndexes: Prisma.DMMF.uniqueIndex[] };`);
+        contents.push(`type Model = { name: string; fields: Prisma.DMMF.Field[], uniqueIndexes: { name: string | null; fields: string[] }[] };`);
         contents.push(`const models: Model[] = ${JSON.stringify(data, null, 2)};`);
         contents.push(`const metadata = { models };`);
         contents.push(`export default metadata;`);
