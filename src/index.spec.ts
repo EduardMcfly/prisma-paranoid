@@ -30,7 +30,7 @@ type ExtensionParams = {
 function createMetadataModel(
   name: string,
   fieldNames: string[],
-  { uniqueIndexes = [{ name: 'User_id_key', fields: ['id'] }] } = {},
+  { uniqueIndexes = [{ name: 'User_id_deletedAt_key', fields: ['id', DEFAULT_ATTRIBUTE] }] } = {},
 ): MetadataModel {
   return {
     name,
@@ -254,7 +254,7 @@ describe('prismaParanoid extension', () => {
     });
 
     describe('deleteMany', () => {
-      it('when model has PK and uniqueIndexes: calls findMany(select) then $transaction(update with select) per item', async () => {
+      it('when model has PK and paranoid field is in a uniqueIndex: calls findMany(select) then $transaction(update with select) per item', async () => {
         const { capturedHandlers, captured } = installExtensionWithFakeClient(defaultOptions, {
           User: [{ id: 1 }, { id: 2 }],
         });
@@ -285,7 +285,7 @@ describe('prismaParanoid extension', () => {
         expect(result).to.eql({ count: 2 });
       });
 
-      it('when model has PK but no uniqueIndexes: falls back to updateMany()', async () => {
+      it('when model has PK but paranoid field is not in a uniqueIndex: falls back to updateMany()', async () => {
         const modelNoUnique = createMetadataModel('UserNoUnique', ['id', 'email', DEFAULT_ATTRIBUTE], {
           uniqueIndexes: [],
         });

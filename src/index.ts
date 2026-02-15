@@ -88,9 +88,11 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opti
               const where = { [fieldName]: valueOnFilter(), ...args.where };
 
               const pkId = dataModel.fields.find((field) => field.isId);
-              const hasUniqueIndexes = dataModel.uniqueIndexes.length > 0;
+              const paranoidFieldIsUniqueIndexed = dataModel.uniqueIndexes.some((index) =>
+                index.fields.includes(fieldName),
+              );
               const methodName = uncapitalize(model);
-              if (pkId && hasUniqueIndexes) {
+              if (pkId && paranoidFieldIsUniqueIndexed) {
                 const findMany = client[methodName].findMany as FindManyMethod;
                 const list = await findMany({ where, select: { [pkId.name]: true } });
                 await client.$transaction(async (client) => {
