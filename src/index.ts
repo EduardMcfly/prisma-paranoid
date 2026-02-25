@@ -1,15 +1,16 @@
 import { Prisma } from '@prisma/client';
-import type { GetBatchResult } from '@prisma/client/runtime/client';
-import { deepSoftDelete } from './utils/deepSoftDelete';
-import { isParanoid, getParanoidField, uncapitalize } from './utils/common';
 import { SoftDeleteOptions, SoftDeleteConfig, SoftDeleteContext, MetadataModel } from './types';
 import { DEFAULT_ATTRIBUTE, DEFAULT_TYPE, valuesOnDelete, valuesOnFilter } from './constants';
 import { buildModelsWithField } from './utils/buildModelsWithField';
 import { logParanoidModels } from './utils/logger';
-
-type PrismaMethod = (args: Record<string, unknown>) => Promise<Record<string, unknown>>;
-type FindManyMethod = (args: Record<string, unknown>) => Promise<Record<string, unknown>[]>;
-type BulkMethod = (args: Record<string, unknown>) => Promise<GetBatchResult>;
+import { deleteOperation } from './operations/delete';
+import { deleteManyOperation } from './operations/deleteMany';
+import { findUniqueOperation } from './operations/findUnique';
+import { findUniqueOrThrowOperation } from './operations/findUniqueOrThrow';
+import { findFirstOperation } from './operations/findFirst';
+import { findFirstOrThrowOperation } from './operations/findFirstOrThrow';
+import { findManyOperation } from './operations/findMany';
+import { groupByOperation } from './operations/groupBy';
 
 function buildConfig<ModelName extends string = Prisma.ModelName>(
   opts: SoftDeleteOptions<ModelName>,
@@ -54,147 +55,36 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opti
 
     logParanoidModels(models, options.log);
 
+    const operationOptions = {
+      config,
+      dataModelsMap,
+      ctx,
+      models,
+    };
     return client.$extends({
       query: {
         $allModels: {
-          async delete(params) {
-            const { model, args, query } = params;
-            const dataModel = model ? dataModelsMap.get(model) : undefined;
-            if (dataModel && isParanoid(model, ctx)) {
-              const modelConfig = ctx.models[model];
-              const fieldName = getParanoidField(modelConfig ?? config);
-              const valueOnDelete = modelConfig?.valueOnDelete ?? config.valueOnDelete;
-              const valueOnFilter = modelConfig?.valueOnFilter ?? config.valueOnFilter;
-              const updateArgs = {
-                where: { [fieldName]: valueOnFilter(), ...args.where },
-                data: {
-                  [fieldName]: valueOnDelete(),
-                },
-              };
-              const methodName = uncapitalize(model);
-              const update = client[methodName].update as PrismaMethod;
-              return update(updateArgs);
+          async $allOperations(params) {
+            switch (params.operation) {
+              case 'delete':
+                return deleteOperation(params, operationOptions);
+              case 'deleteMany':
+                return deleteManyOperation(params, operationOptions);
+              case 'findUnique':
+                return findUniqueOperation(params, operationOptions);
+              case 'findUniqueOrThrow':
+                return findUniqueOrThrowOperation(params, operationOptions);
+              case 'findFirst':
+                return findFirstOperation(params, operationOptions);
+              case 'findFirstOrThrow':
+                return findFirstOrThrowOperation(params, operationOptions);
+              case 'findMany':
+                return findManyOperation(params, operationOptions);
+              case 'groupBy':
+                return groupByOperation(params, operationOptions);
+              default:
+                return params.query(params.args);
             }
-            return query(args);
-          },
-          async deleteMany(params): Promise<GetBatchResult> {
-            const { model, args, query } = params;
-            const dataModel = model ? dataModelsMap.get(model) : undefined;
-            if (dataModel && isParanoid(model, ctx)) {
-              const modelConfig = ctx.models[model];
-              const fieldName = getParanoidField(modelConfig ?? config);
-              const valueOnDelete = modelConfig?.valueOnDelete ?? config.valueOnDelete;
-              const valueOnFilter = modelConfig?.valueOnFilter ?? config.valueOnFilter;
-              const where = { [fieldName]: valueOnFilter(), ...args.where };
-
-              const pkId = dataModel.fields.find((field) => field.isId);
-              const paranoidFieldIsUniqueIndexed = dataModel.uniqueIndexes.some((index) =>
-                index.fields.includes(fieldName),
-              );
-              const methodName = uncapitalize(model);
-              if (pkId && paranoidFieldIsUniqueIndexed) {
-                const findMany = client[methodName].findMany as FindManyMethod;
-                const list = await findMany({ where, select: { [pkId.name]: true } });
-                await client.$transaction(async (client) => {
-                  const update = client[methodName].update as PrismaMethod;
-                  for (const item of list) {
-                    await update({
-                      where: { [pkId.name]: item.id },
-                      data: { [fieldName]: valueOnDelete() },
-                      select: { [pkId.name]: true },
-                    });
-                  }
-                });
-                return { count: list.length };
-              }
-
-              const updateArgs = {
-                where: where,
-                data: {
-                  [fieldName]: valueOnDelete(),
-                },
-              };
-              const updateMany = client[methodName].updateMany as BulkMethod;
-              return updateMany(updateArgs);
-            }
-            return query(args);
-          },
-          async findUnique(params) {
-            const { model, args, query } = params;
-
-            const dataModel = model ? dataModelsMap.get(model) : undefined;
-            if (dataModel && isParanoid(model, ctx)) {
-              const newArgs = { ...args };
-              newArgs.where ||= {} as any;
-              const { where } = deepSoftDelete(dataModel, newArgs.where, newArgs.include, ctx);
-              newArgs.where = where;
-              const methodName = uncapitalize(model);
-              const findFirst = client[methodName].findFirst as PrismaMethod;
-              return findFirst(newArgs);
-            }
-            return query(args);
-          },
-          async findUniqueOrThrow(params) {
-            const { model, args, query } = params;
-            const dataModel = model ? dataModelsMap.get(model) : undefined;
-            if (dataModel && isParanoid(model, ctx)) {
-              const newArgs = { ...args };
-              newArgs.where ||= {} as any;
-              const { where } = deepSoftDelete(dataModel, newArgs.where, newArgs.include, ctx);
-              newArgs.where = where;
-              const methodName = uncapitalize(model);
-              const findFirstOrThrow = client[methodName].findFirstOrThrow as PrismaMethod;
-              return findFirstOrThrow(newArgs);
-            }
-            return query(args);
-          },
-          async findFirst(params) {
-            const { model, args, query } = params;
-            const dataModel = model ? dataModelsMap.get(model) : undefined;
-            if (dataModel && isParanoid(model, ctx)) {
-              const newArgs = { ...args };
-              newArgs.where ||= {};
-              const { where } = deepSoftDelete(dataModel, newArgs.where, newArgs.include, ctx);
-              newArgs.where = where;
-              return query(newArgs);
-            }
-            return query(args);
-          },
-          async findFirstOrThrow(params) {
-            const { model, args, query } = params;
-            const dataModel = model ? dataModelsMap.get(model) : undefined;
-            if (dataModel && isParanoid(model, ctx)) {
-              const newArgs = { ...args };
-              newArgs.where ||= {};
-              const { where } = deepSoftDelete(dataModel, newArgs.where, newArgs.include, ctx);
-              newArgs.where = where;
-              return query(newArgs);
-            }
-            return query(args);
-          },
-          async findMany(params) {
-            const { model, args, query } = params;
-            const dataModel = model ? dataModelsMap.get(model) : undefined;
-            if (dataModel && isParanoid(model, ctx)) {
-              const newArgs = { ...args };
-              newArgs.where ||= {};
-              const { where } = deepSoftDelete(dataModel, newArgs.where, newArgs.include, ctx);
-              newArgs.where = where;
-              return query(newArgs);
-            }
-            return query(args);
-          },
-          async groupBy(params) {
-            const { model, args, query } = params;
-            const dataModel = model ? dataModelsMap.get(model) : undefined;
-            if (dataModel && isParanoid(model, ctx)) {
-              const newArgs = { ...args };
-              newArgs.where ||= {};
-              const { where } = deepSoftDelete(dataModel, newArgs.where, null, ctx);
-              newArgs.where = where;
-              return query(newArgs);
-            }
-            return query(args);
           },
         },
       },
