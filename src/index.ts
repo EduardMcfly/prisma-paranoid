@@ -11,6 +11,8 @@ import { findFirstOperation } from './operations/findFirst';
 import { findFirstOrThrowOperation } from './operations/findFirstOrThrow';
 import { findManyOperation } from './operations/findMany';
 import { groupByOperation } from './operations/groupBy';
+import { countOperation } from './operations/count';
+import { aggregateOperation } from './operations/aggregate';
 
 function buildConfig<ModelName extends string = Prisma.ModelName>(
   opts: SoftDeleteOptions<ModelName>,
@@ -82,6 +84,10 @@ export const prismaParanoid = <ModelName extends string = Prisma.ModelName>(opti
                 return findManyOperation(params, operationOptions);
               case 'groupBy':
                 return groupByOperation(params, operationOptions);
+              case 'count':
+                return countOperation(params, operationOptions);
+              case 'aggregate':
+                return aggregateOperation(params, operationOptions);
               default:
                 return params.query(params.args);
             }

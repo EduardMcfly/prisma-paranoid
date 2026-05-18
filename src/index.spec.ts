@@ -120,6 +120,37 @@ describe('index', () => {
       }
     });
 
+    it('applies soft-delete filter on count for paranoid models', () => {
+      const metadata = { models: [createMetadataModel('User', ['id', 'deletedAt'])] };
+      const { client, extendedResult } = createFakeClient();
+      (Prisma.defineExtension as any) = (fn: (c: any) => any) => fn(client);
+      try {
+        prismaParanoid({
+          metadata,
+          auto: true,
+        } as SoftDeleteOptions<string>);
+        const allOps = extendedResult.query.$allModels?.$allOperations!;
+        let capturedArgs: any;
+        const queryStub = (args: any) => {
+          capturedArgs = args;
+          return Promise.resolve(1);
+        };
+        const params = {
+          operation: 'count',
+          model: 'User',
+          args: {},
+          query: queryStub,
+          __internalParams: {},
+        };
+        return allOps(params).then((result: unknown) => {
+          expect(result).to.equal(1);
+          expect(capturedArgs.where).to.have.property('deletedAt', null);
+        });
+      } finally {
+        (Prisma as any).defineExtension = Prisma.defineExtension;
+      }
+    });
+
     it('passes through to params.query for unknown operations', () => {
       const metadata = { models: [createMetadataModel('User', ['id', 'deletedAt'])] };
       const { client, extendedResult } = createFakeClient();
