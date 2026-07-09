@@ -158,9 +158,11 @@ describe('index', () => {
     it('expands compound unique fields before converting findUnique to findFirst', () => {
       const metadata = {
         models: [
-          createMetadataModel('CalendarEvent', ['id', 'sourceType', 'sourceId', 'deletedAt'], [
-            { name: null, fields: ['sourceType', 'sourceId'] },
-          ]),
+          createMetadataModel(
+            'CalendarEvent',
+            ['id', 'sourceType', 'sourceId', 'deletedAt'],
+            [{ name: null, fields: ['sourceType', 'sourceId'] }],
+          ),
         ],
       };
       const { client, extendedResult } = createFakeClient();
@@ -205,12 +207,63 @@ describe('index', () => {
       }
     });
 
+    it('expands compound unique fields on findFirst before adding the soft-delete filter', () => {
+      const metadata = {
+        models: [
+          createMetadataModel(
+            'CalendarEvent',
+            ['id', 'sourceType', 'sourceId', 'deletedAt'],
+            [{ name: null, fields: ['sourceType', 'sourceId'] }],
+          ),
+        ],
+      };
+      const { client, extendedResult } = createFakeClient();
+      (Prisma.defineExtension as any) = (fn: (c: any) => any) => fn(client);
+      try {
+        prismaParanoid({
+          metadata,
+          auto: true,
+        } as SoftDeleteOptions<string>);
+        const allOps = extendedResult.query.$allModels?.$allOperations!;
+        let capturedArgs: any;
+        const queryStub = (args: any) => {
+          capturedArgs = args;
+          return Promise.resolve({});
+        };
+        const params = {
+          operation: 'findFirst',
+          model: 'CalendarEvent',
+          args: {
+            where: {
+              sourceType_sourceId: {
+                sourceType: 'INVENTORY_APPLICATION',
+                sourceId: 552,
+              },
+            },
+          },
+          query: queryStub,
+          __internalParams: {},
+        };
+        return allOps(params).then(() => {
+          expect(capturedArgs.where).to.eql({
+            sourceType: 'INVENTORY_APPLICATION',
+            sourceId: 552,
+            deletedAt: null,
+          });
+        });
+      } finally {
+        (Prisma as any).defineExtension = Prisma.defineExtension;
+      }
+    });
+
     it('expands named compound unique fields before converting findUniqueOrThrow to findFirstOrThrow', () => {
       const metadata = {
         models: [
-          createMetadataModel('CalendarEvent', ['id', 'sourceType', 'sourceId', 'deletedAt'], [
-            { name: 'source', fields: ['sourceType', 'sourceId'] },
-          ]),
+          createMetadataModel(
+            'CalendarEvent',
+            ['id', 'sourceType', 'sourceId', 'deletedAt'],
+            [{ name: 'source', fields: ['sourceType', 'sourceId'] }],
+          ),
         ],
       };
       const { client, extendedResult } = createFakeClient();

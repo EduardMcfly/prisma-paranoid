@@ -1,5 +1,5 @@
 import { ModelWhere, ModelInclude, SoftDeleteContext, MetadataModel } from '../types';
-import { getParanoidField, isParanoid } from './common';
+import { expandCompoundUniqueWhere, getParanoidField, isParanoid } from './common';
 import { OPERATIONS_WITH_RELATION_FILTERS, RELATION_FILTERS, valuesOnFilter } from '../constants';
 import { buildFieldSoftDelete } from './buildFieldSoftDelete';
 
@@ -9,7 +9,7 @@ export const deepSoftDelete = <Where extends ModelWhere, Include extends ModelIn
   include?: Include | null,
   ctx?: SoftDeleteContext,
 ) => {
-  const newWhere = { ...where };
+  const newWhere = expandCompoundUniqueWhere(model, { ...where });
 
   let newInclude: ModelInclude | undefined = include ? { ...include } : undefined;
 
