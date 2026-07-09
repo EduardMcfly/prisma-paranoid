@@ -1,6 +1,6 @@
 {
   "name": "prisma-paranoid",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "description": "Prisma extension for soft delete (paranoid pattern)",
   "main": "lib/cjs/index.cjs",
   "module": "lib/esm/index.mjs",
