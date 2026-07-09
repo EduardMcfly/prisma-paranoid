@@ -39,8 +39,9 @@ generatorHandler({
         contents.push(
           `type Model = { name: string; fields: Prisma.DMMF.Field[], uniqueIndexes: { name: string | null; fields: string[] }[] };`,
         );
-        contents.push(`const models: Model[] = ${JSON.stringify(data, null, 2)};`);
-        contents.push(`const metadata = { models };`);
+        contents.push(`const models = ${JSON.stringify(data, null, 2)} as const satisfies Model[];\n`);
+        contents.push(`const metadata = { models };\n`);
+        contents.push(`export type MetadataModels = typeof models;\n`);
         contents.push(`export default metadata;`);
         writeFileSync(outputFile, contents.join('\n'), 'utf8');
         break;
