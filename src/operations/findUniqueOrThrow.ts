@@ -1,4 +1,4 @@
-import { isParanoid } from '../utils/common';
+import { expandCompoundUniqueWhere, isParanoid } from '../utils/common';
 import { deepSoftDelete } from '../utils/deepSoftDelete';
 import { ArgsOperations, OperationContext } from './types';
 
@@ -15,6 +15,7 @@ export async function findUniqueOrThrowOperation(
   if (dataModel && isParanoid(model, ctx)) {
     const newArgs = { ...args };
     newArgs.where ||= {} as any;
+    newArgs.where = expandCompoundUniqueWhere(dataModel, newArgs.where) as any;
     const { where } = deepSoftDelete(dataModel, newArgs.where, newArgs.include, ctx);
     newArgs.where = where;
     return query(newArgs, { ...__internalParams, action: 'findFirstOrThrow', args: newArgs });

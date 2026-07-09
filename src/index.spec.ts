@@ -4,7 +4,11 @@ import { prismaParanoid } from './index';
 import { DEFAULT_ATTRIBUTE } from './constants';
 import type { MetadataModel, SoftDeleteOptions } from './types';
 
-function createMetadataModel(name: string, fieldNames: string[]): MetadataModel {
+function createMetadataModel(
+  name: string,
+  fieldNames: string[],
+  uniqueIndexes: MetadataModel['uniqueIndexes'] = [],
+): MetadataModel {
   return {
     name,
     fields: fieldNames.map((f) => ({
@@ -19,7 +23,7 @@ function createMetadataModel(name: string, fieldNames: string[]): MetadataModel 
       isUnique: false,
       isGenerated: false,
     })),
-    uniqueIndexes: [],
+    uniqueIndexes,
   };
 }
 
@@ -145,6 +149,106 @@ describe('index', () => {
         return allOps(params).then((result: unknown) => {
           expect(result).to.equal(1);
           expect(capturedArgs.where).to.have.property('deletedAt', null);
+        });
+      } finally {
+        (Prisma as any).defineExtension = Prisma.defineExtension;
+      }
+    });
+
+    it('expands compound unique fields before converting findUnique to findFirst', () => {
+      const metadata = {
+        models: [
+          createMetadataModel('CalendarEvent', ['id', 'sourceType', 'sourceId', 'deletedAt'], [
+            { name: null, fields: ['sourceType', 'sourceId'] },
+          ]),
+        ],
+      };
+      const { client, extendedResult } = createFakeClient();
+      (Prisma.defineExtension as any) = (fn: (c: any) => any) => fn(client);
+      try {
+        prismaParanoid({
+          metadata,
+          auto: true,
+        } as SoftDeleteOptions<string>);
+        const allOps = extendedResult.query.$allModels?.$allOperations!;
+        let capturedArgs: any;
+        let capturedInternalParams: any;
+        const queryStub = (args: any, internalParams: any) => {
+          capturedArgs = args;
+          capturedInternalParams = internalParams;
+          return Promise.resolve({});
+        };
+        const params = {
+          operation: 'findUnique',
+          model: 'CalendarEvent',
+          args: {
+            where: {
+              sourceType_sourceId: {
+                sourceType: 'INVENTORY_APPLICATION',
+                sourceId: 552,
+              },
+            },
+          },
+          query: queryStub,
+          __internalParams: {},
+        };
+        return allOps(params).then(() => {
+          expect(capturedInternalParams.action).to.equal('findFirst');
+          expect(capturedArgs.where).to.eql({
+            sourceType: 'INVENTORY_APPLICATION',
+            sourceId: 552,
+            deletedAt: null,
+          });
+        });
+      } finally {
+        (Prisma as any).defineExtension = Prisma.defineExtension;
+      }
+    });
+
+    it('expands named compound unique fields before converting findUniqueOrThrow to findFirstOrThrow', () => {
+      const metadata = {
+        models: [
+          createMetadataModel('CalendarEvent', ['id', 'sourceType', 'sourceId', 'deletedAt'], [
+            { name: 'source', fields: ['sourceType', 'sourceId'] },
+          ]),
+        ],
+      };
+      const { client, extendedResult } = createFakeClient();
+      (Prisma.defineExtension as any) = (fn: (c: any) => any) => fn(client);
+      try {
+        prismaParanoid({
+          metadata,
+          auto: true,
+        } as SoftDeleteOptions<string>);
+        const allOps = extendedResult.query.$allModels?.$allOperations!;
+        let capturedArgs: any;
+        let capturedInternalParams: any;
+        const queryStub = (args: any, internalParams: any) => {
+          capturedArgs = args;
+          capturedInternalParams = internalParams;
+          return Promise.resolve({});
+        };
+        const params = {
+          operation: 'findUniqueOrThrow',
+          model: 'CalendarEvent',
+          args: {
+            where: {
+              source: {
+                sourceType: 'INVENTORY_APPLICATION',
+                sourceId: 552,
+              },
+            },
+          },
+          query: queryStub,
+          __internalParams: {},
+        };
+        return allOps(params).then(() => {
+          expect(capturedInternalParams.action).to.equal('findFirstOrThrow');
+          expect(capturedArgs.where).to.eql({
+            sourceType: 'INVENTORY_APPLICATION',
+            sourceId: 552,
+            deletedAt: null,
+          });
         });
       } finally {
         (Prisma as any).defineExtension = Prisma.defineExtension;
