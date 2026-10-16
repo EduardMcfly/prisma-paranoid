@@ -247,6 +247,30 @@ describe('softDelete', () => {
     });
 
     describe('include', () => {
+      it('does not require an optional to-one relation that is only included', () => {
+        const { where } = deepSoftDelete<Prisma.BovineWhereInput, Prisma.BovineInclude>(
+          bovine,
+          {},
+          { animalGender: true },
+          ctxBovine,
+        );
+        expect(where).to.eql({ deletedAt: null });
+        expect(where).to.not.have.property('animalGender');
+      });
+
+      it('still filters a required to-one relation that is included', () => {
+        const { where } = deepSoftDelete<Prisma.BovineWhereInput, Prisma.BovineInclude>(
+          bovine,
+          {},
+          { farm: true },
+          ctxBovine,
+        );
+        expect(where).to.eql({
+          deletedAt: null,
+          farm: { deletedAt: null },
+        });
+      });
+
       describe('user', () => {
         describe('userRoles', () => {
           it('should return a where object with deletedAt: null', () => {

@@ -1,6 +1,6 @@
 import { isParanoid } from '../utils/common';
-import { deepSoftDelete } from '../utils/deepSoftDelete';
 import { ArgsOperations, OperationContext } from './types';
+import { executeParanoidRead } from './paranoidRead';
 
 export async function findFirstOrThrowOperation(
   params: ArgsOperations<'findFirstOrThrow'>,
@@ -13,11 +13,9 @@ export async function findFirstOrThrowOperation(
 
   const dataModel = model ? dataModelsMap.get(model) : undefined;
   if (dataModel && isParanoid(model, ctx)) {
-    const newArgs = { ...args };
-    newArgs.where ||= {} as any;
-    const { where } = deepSoftDelete(dataModel, newArgs.where, newArgs.include, ctx);
-    newArgs.where = where;
-    return query(newArgs, { ...__internalParams, action: 'findFirstOrThrow', args: newArgs });
+    return executeParanoidRead(dataModel, args, ctx, (newArgs) =>
+      query(newArgs, { ...__internalParams, action: 'findFirstOrThrow', args: newArgs }),
+    );
   }
 
   return query(args);

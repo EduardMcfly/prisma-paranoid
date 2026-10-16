@@ -24,7 +24,13 @@ export function buildFieldSoftDelete(
             ...result.where,
           },
         };
-      else newWhere = { ...newWhere, ...result.where };
+      else if (field.isRequired || baseWhere) {
+        // Required to-one, or the caller already filtered this relation: `deletedAt: null`
+        // belongs in that filter. Optional to-one includes must not get the same treatment.
+        // Prisma compiles `where: { relation: { deletedAt: null } }` to `relation.id IS NOT NULL`,
+        // which drops parents whose foreign key is null.
+        newWhere = { ...newWhere, ...result.where };
+      }
       if (result.include) {
         newInclude ||= {};
         newInclude.include = {

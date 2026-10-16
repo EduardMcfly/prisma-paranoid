@@ -1,6 +1,6 @@
 import { isParanoid } from '../utils/common';
-import { deepSoftDelete } from '../utils/deepSoftDelete';
 import { ArgsOperations, OperationContext } from './types';
+import { executeParanoidRead } from './paranoidRead';
 
 export async function findManyOperation(params: ArgsOperations<'findMany'>, { dataModelsMap, ctx }: OperationContext) {
   const __internalParams = params.__internalParams;
@@ -10,11 +10,7 @@ export async function findManyOperation(params: ArgsOperations<'findMany'>, { da
 
   const dataModel = model ? dataModelsMap.get(model) : undefined;
   if (dataModel && isParanoid(model, ctx)) {
-    const newArgs = { ...args };
-    newArgs.where ||= {};
-    const { where } = deepSoftDelete(dataModel, newArgs.where, newArgs.include, ctx);
-    newArgs.where = where;
-    return query(newArgs);
+    return executeParanoidRead(dataModel, args, ctx, (newArgs) => query(newArgs));
   }
   return query(args);
 }
