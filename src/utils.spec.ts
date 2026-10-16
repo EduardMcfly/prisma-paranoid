@@ -273,6 +273,32 @@ describe('softDelete', () => {
 
       describe('user', () => {
         describe('userRoles', () => {
+          it('does not copy a list relation filter into include where', () => {
+            const { where, include } = deepSoftDelete<Prisma.UserWhereInput, Prisma.UserInclude>(
+              user,
+              {
+                userRoles: {
+                  some: { roleId: 1 },
+                },
+              },
+              {
+                userRoles: true,
+              },
+              ctxUser,
+            );
+            expect(where).to.eql({
+              deletedAt: null,
+              userRoles: {
+                some: { roleId: 1, deletedAt: null },
+              },
+            });
+            expect(include).to.eql({
+              userRoles: {
+                where: { deletedAt: null },
+              },
+            });
+          });
+
           it('should return a where object with deletedAt: null', () => {
             const { where, include } = deepSoftDelete<Prisma.UserWhereInput, Prisma.UserInclude>(
               user,

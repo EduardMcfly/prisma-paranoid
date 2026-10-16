@@ -15,7 +15,11 @@ export function buildFieldSoftDelete(
   if (fieldModel && isParanoid(field.type, ctx)) {
     if (baseInclude) {
       const objectInclude = typeof newInclude === 'boolean' ? undefined : newInclude?.include;
-      const result = deepSoftDelete(fieldModel, baseWhere || newInclude?.where, objectInclude, ctx);
+      const includeWhere = typeof newInclude === 'object' ? newInclude?.where : undefined;
+      // List `where` on the parent is a relation filter (`some` / `every` / `none`).
+      // That shape is invalid inside `include.where`, which filters related rows directly.
+      const relationWhere = field.isList ? includeWhere : baseWhere || includeWhere;
+      const result = deepSoftDelete(fieldModel, relationWhere, objectInclude, ctx);
       if (field.isList)
         newInclude = {
           ...newInclude,
